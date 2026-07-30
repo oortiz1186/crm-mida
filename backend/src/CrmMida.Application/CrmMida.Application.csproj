@@ -4,7 +4,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\CrmMida.Domain\CrmMida.Domain.csproj" />
   </ItemGroup>
 </Project>
