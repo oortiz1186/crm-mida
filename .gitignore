@@ -1,0 +1,26 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+**/appsettings.Development.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
