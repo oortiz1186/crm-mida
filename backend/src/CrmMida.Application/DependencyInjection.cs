@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace CrmMida.Application;
 
 public static class DependencyInjection
