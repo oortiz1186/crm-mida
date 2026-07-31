@@ -18,6 +18,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+    public DbSet<CatalogItem> CatalogItems => Set<CatalogItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,5 +38,6 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
         modelBuilder.Entity<Quote>(entity => { entity.ToTable("quotes"); entity.HasKey(x => x.Id); entity.Property(x => x.Folio).HasMaxLength(30).IsRequired(); entity.Property(x => x.Title).HasMaxLength(250).IsRequired(); entity.Property(x => x.Currency).HasMaxLength(10).IsRequired(); entity.Property(x => x.Discount).HasPrecision(18, 2); entity.Property(x => x.Subtotal).HasPrecision(18, 2); entity.Property(x => x.Tax).HasPrecision(18, 2); entity.Property(x => x.Total).HasPrecision(18, 2); entity.Property(x => x.Status).HasMaxLength(30).IsRequired(); entity.Property(x => x.Notes).HasMaxLength(2000); entity.HasIndex(x => x.Folio).IsUnique(); entity.HasIndex(x => x.Status); entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Contact).WithMany().HasForeignKey(x => x.ContactId).OnDelete(DeleteBehavior.SetNull); entity.HasOne(x => x.Opportunity).WithMany().HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.SetNull); entity.HasMany(x => x.Items).WithOne(x => x.Quote).HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Cascade); });
         modelBuilder.Entity<QuoteItem>(entity => { entity.ToTable("quote_items"); entity.HasKey(x => x.Id); entity.Property(x => x.Description).HasMaxLength(500).IsRequired(); entity.Property(x => x.Quantity).HasPrecision(18, 4); entity.Property(x => x.UnitPrice).HasPrecision(18, 2); entity.Property(x => x.TaxRate).HasPrecision(8, 4); entity.Property(x => x.Subtotal).HasPrecision(18, 2); entity.Property(x => x.Tax).HasPrecision(18, 2); entity.Property(x => x.Total).HasPrecision(18, 2); });
+        modelBuilder.Entity<CatalogItem>(entity => { entity.ToTable("catalog_items"); entity.HasKey(x => x.Id); entity.Property(x => x.Code).HasMaxLength(50).IsRequired(); entity.Property(x => x.Name).HasMaxLength(250).IsRequired(); entity.Property(x => x.Type).HasMaxLength(30).IsRequired(); entity.Property(x => x.Description).HasMaxLength(1000); entity.Property(x => x.UnitPrice).HasPrecision(18, 2); entity.Property(x => x.TaxRate).HasPrecision(8, 4); entity.HasIndex(x => x.Code).IsUnique(); entity.HasIndex(x => new { x.Type, x.IsActive }); });
     }
 }
