@@ -19,7 +19,6 @@ public static class QuoteEndpoints
                 query = query.Where(x => x.Folio.ToLower().Contains(term) || x.Title.ToLower().Contains(term) || x.Company!.TradeName.ToLower().Contains(term));
             }
             if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToLower());
-
             var entities = await query.OrderByDescending(x => x.CreatedAtUtc).ToListAsync(ct);
             return Results.Ok(entities.Select(ToDto).ToArray());
         }).RequireAuthorization("quotes.read");
@@ -28,6 +27,14 @@ public static class QuoteEndpoints
         {
             var quote = await db.Quotes.AsNoTracking().Include(x => x.Company).Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == id, ct);
             return quote is null ? Results.NotFound() : Results.Ok(ToDto(quote));
+        }).RequireAuthorization("quotes.read");
+
+        group.MapGet("/{id:guid}/pdf", async (Guid id, ApplicationDbContext db, QuotePdfService pdfService, CancellationToken ct) =>
+        {
+            var quote = await db.Quotes.AsNoTracking().Include(x => x.Company).Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (quote is null) return Results.NotFound();
+            var bytes = pdfService.Generate(quote);
+            return Results.File(bytes, "application/pdf", $"{quote.Folio}.pdf");
         }).RequireAuthorization("quotes.read");
 
         group.MapPost("/", async (SaveQuoteRequest request, ApplicationDbContext db, CancellationToken ct) =>
