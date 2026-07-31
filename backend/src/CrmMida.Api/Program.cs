@@ -110,6 +110,7 @@ app.MapAgendaDashboardEndpoints();
 app.MapImportAuditEndpoints();
 app.MapDocumentsReportsEndpoints();
 app.MapUserAdministrationEndpoints();
+app.MapGlobalSearchEndpoints();
 
 app.Run();
 public partial class Program;
