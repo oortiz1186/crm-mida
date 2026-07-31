@@ -6,6 +6,7 @@ import App from './App'
 import ProspectsApp from './ProspectsApp'
 import OpportunitiesApp from './OpportunitiesApp'
 import QuotesApp from './QuotesApp'
+import CatalogApp from './CatalogApp'
 import { theme } from './theme/theme'
 
 function Root() {
@@ -15,6 +16,7 @@ function Root() {
         <Route path="/prospects" element={<ProspectsApp />} />
         <Route path="/opportunities" element={<OpportunitiesApp />} />
         <Route path="/quotes" element={<QuotesApp />} />
+        <Route path="/catalog" element={<CatalogApp />} />
         <Route path="*" element={<App />} />
       </Routes>
       <Box position="fixed" bottom={16} right={16} zIndex={1600}>
@@ -22,7 +24,8 @@ function Root() {
           <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
           <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
           <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
-          <Button component={Link} to="/quotes" variant="contained" size="small">Cotizaciones</Button>
+          <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
+          <Button component={Link} to="/catalog" variant="contained" size="small">Catálogo</Button>
         </Stack>
       </Box>
     </>
