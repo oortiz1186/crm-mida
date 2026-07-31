@@ -14,6 +14,7 @@ import AdministrationApp from './AdministrationApp'
 import DocumentsReportsApp from './DocumentsReportsApp'
 import UsersAuditApp from './UsersAuditApp'
 import PublicQuoteApp from './PublicQuoteApp'
+import GlobalSearch from './GlobalSearch'
 import { theme } from './theme/theme'
 
 function Root() {
@@ -34,19 +35,22 @@ function Root() {
       <Route path="/customers" element={<Customer360App />} />
       <Route path="*" element={<App />} />
     </Routes>
-    {!isPublicPortal && <Box position="fixed" bottom={16} right={16} zIndex={1600}><Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
-      <Button component={Link} to="/dashboard" variant="contained" size="small">Dashboard</Button>
-      <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
-      <Button component={Link} to="/customers" variant="outlined" size="small">Cliente 360°</Button>
-      <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
-      <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
-      <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
-      <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
-      <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
-      <Button component={Link} to="/documents-reports" variant="outlined" size="small">Documentos</Button>
-      <Button component={Link} to="/users-audit" variant="outlined" size="small">Usuarios</Button>
-      <Button component={Link} to="/administration" variant="outlined" size="small">Administración</Button>
-    </Stack></Box>}
+    {!isPublicPortal && <>
+      <Box position="fixed" top={16} right={16} zIndex={1600}><GlobalSearch /></Box>
+      <Box position="fixed" bottom={16} right={16} zIndex={1600} maxWidth="calc(100vw - 32px)"><Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end" useFlexGap>
+        <Button component={Link} to="/dashboard" variant="contained" size="small">Dashboard</Button>
+        <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
+        <Button component={Link} to="/customers" variant="outlined" size="small">Cliente 360°</Button>
+        <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
+        <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
+        <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
+        <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
+        <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
+        <Button component={Link} to="/documents-reports" variant="outlined" size="small">Documentos</Button>
+        <Button component={Link} to="/users-audit" variant="outlined" size="small">Usuarios</Button>
+        <Button component={Link} to="/administration" variant="outlined" size="small">Administración</Button>
+      </Stack></Box>
+    </>}
   </>
 }
 
