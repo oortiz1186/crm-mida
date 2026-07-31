@@ -98,6 +98,7 @@ app.MapCatalogEndpoints();
 app.MapQuotePortalEndpoints();
 app.MapQuoteAccessManagementEndpoints();
 app.MapLicenseEndpoints();
+app.MapLicenseDashboardEndpoints();
 
 app.Run();
 public partial class Program;
