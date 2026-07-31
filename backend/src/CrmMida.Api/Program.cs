@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using CrmMida.Api.Auth;
+using CrmMida.Api.Commercial;
 using CrmMida.Application;
 using CrmMida.Application.Security;
 using CrmMida.Infrastructure;
@@ -166,6 +167,8 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
         roles,
         permissions));
 }).RequireAuthorization();
+
+app.MapCommercialEndpoints();
 
 app.Run();
 
