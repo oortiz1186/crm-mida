@@ -8,6 +8,7 @@ import OpportunitiesApp from './OpportunitiesApp'
 import QuotesApp from './QuotesApp'
 import CatalogApp from './CatalogApp'
 import LicensesApp from './LicensesApp'
+import ContpaqiIntegrationApp from './ContpaqiIntegrationApp'
 import PublicQuoteApp from './PublicQuoteApp'
 import { theme } from './theme/theme'
 
@@ -22,6 +23,7 @@ function Root() {
       <Route path="/quotes" element={<QuotesApp />} />
       <Route path="/catalog" element={<CatalogApp />} />
       <Route path="/licenses" element={<LicensesApp />} />
+      <Route path="/integrations/contpaqi" element={<ContpaqiIntegrationApp />} />
       <Route path="*" element={<App />} />
     </Routes>
     {!isPublicPortal && <Box position="fixed" bottom={16} right={16} zIndex={1600}><Stack direction="row" spacing={1}>
@@ -30,7 +32,8 @@ function Root() {
       <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
       <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
       <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
-      <Button component={Link} to="/licenses" variant="contained" size="small">Licencias</Button>
+      <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
+      <Button component={Link} to="/integrations/contpaqi" variant="contained" size="small">CONTPAQi</Button>
     </Stack></Box>}
   </>
 }
