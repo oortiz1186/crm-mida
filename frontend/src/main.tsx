@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import App from './App'
+import CompaniesApp from './CompaniesApp'
 import ProspectsApp from './ProspectsApp'
 import OpportunitiesApp from './OpportunitiesApp'
 import QuotesApp from './QuotesApp'
@@ -37,7 +37,8 @@ function PrivateWorkspace() {
         <Route path="/catalog" element={<CatalogApp />} />
         <Route path="/licenses" element={<LicensesApp />} />
         <Route path="/customers" element={<Customer360App />} />
-        <Route path="*" element={<App />} />
+        <Route path="/" element={<CompaniesApp />} />
+        <Route path="*" element={<CompaniesApp />} />
       </Routes>
     </AppShell>
   </ProtectedRoute>
