@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using QuestPDF.Infrastructure;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<QuotePdfService>();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme { Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header });
@@ -41,7 +45,8 @@ builder.Services.AddAuthorization(options =>
     {
         "companies.read", "companies.manage", "contacts.read", "contacts.manage",
         "prospects.read", "prospects.manage", "opportunities.read", "opportunities.manage",
-        "activities.read", "activities.manage", "quotes.read", "quotes.manage"
+        "activities.read", "activities.manage", "quotes.read", "quotes.manage",
+        "catalog.read", "catalog.manage"
     }) options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
 });
 
@@ -87,6 +92,7 @@ app.MapCommercialEndpoints();
 app.MapProspectEndpoints();
 app.MapOpportunityEndpoints();
 app.MapQuoteEndpoints();
+app.MapCatalogEndpoints();
 
 app.Run();
 public partial class Program;
