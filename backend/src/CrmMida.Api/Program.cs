@@ -93,6 +93,7 @@ app.UseExceptionHandler();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CommercialAuthorizationMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -103,7 +104,7 @@ if (app.Environment.IsDevelopment())
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await dbContext.Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<AuthSeeder>().SeedAsync();
 }
 
