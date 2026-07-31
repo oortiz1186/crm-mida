@@ -67,7 +67,7 @@ public sealed class QuoteDeliveryService(
             };
 
             await client.SendMailAsync(mail, cancellationToken);
-            return QuoteDeliveryResult.Sent("email", "Cotización enviada por correo.");
+            return QuoteDeliveryResult.Sent("email", "Cotización enviada por correo.", $"smtp:{DateTime.UtcNow:O}");
         }
         catch (Exception exception)
         {
@@ -109,7 +109,8 @@ public sealed class QuoteDeliveryService(
                 return QuoteDeliveryResult.Failed("whatsapp", $"Evolution API respondió {(int)response.StatusCode}: {responseBody}");
             }
 
-            return QuoteDeliveryResult.Sent("whatsapp", "Cotización enviada por WhatsApp.");
+            var reference = response.Headers.TryGetValues("x-request-id", out var values) ? values.FirstOrDefault() : null;
+            return QuoteDeliveryResult.Sent("whatsapp", "Cotización enviada por WhatsApp.", reference);
         }
         catch (Exception exception)
         {
@@ -130,9 +131,9 @@ public sealed class QuoteDeliveryService(
         new(value.Where(char.IsDigit).ToArray());
 }
 
-public sealed record QuoteDeliveryResult(string Channel, string Status, string Message)
+public sealed record QuoteDeliveryResult(string Channel, string Status, string Message, string? Reference = null)
 {
-    public static QuoteDeliveryResult Sent(string channel, string message) => new(channel, "sent", message);
+    public static QuoteDeliveryResult Sent(string channel, string message, string? reference = null) => new(channel, "sent", message, reference);
     public static QuoteDeliveryResult NotConfigured(string channel, string message) => new(channel, "not_configured", message);
     public static QuoteDeliveryResult Failed(string channel, string message) => new(channel, "failed", message);
 }
