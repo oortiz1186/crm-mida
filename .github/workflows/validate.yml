@@ -14,7 +14,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet build backend/src/CrmMida.Api/CrmMida.Api.csproj --configuration Release
-      - run: dotnet test backend/tests/CrmMida.Domain.Tests/CrmMida.Domain.Tests.csproj --configuration Release --no-restore
+      - run: dotnet test backend/tests/CrmMida.Domain.Tests/CrmMida.Domain.Tests.csproj --configuration Release
 
   frontend:
     runs-on: ubuntu-latest
