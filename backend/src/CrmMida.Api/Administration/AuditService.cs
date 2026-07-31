@@ -2,6 +2,7 @@ using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using CrmMida.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace CrmMida.Api.Administration;
 
