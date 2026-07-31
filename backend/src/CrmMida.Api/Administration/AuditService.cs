@@ -26,11 +26,11 @@ public sealed class AuditService(ApplicationDbContext db)
             VALUES (@id, @userId, @email, @action, @entityType, @entityId, @details, @created);
             """;
         Add(command, "@id", Guid.NewGuid());
-        Add(command, "@userId", userId ?? (object)DBNull.Value);
-        Add(command, "@email", email ?? (object)DBNull.Value);
+        Add(command, "@userId", userId.HasValue ? userId.Value : DBNull.Value);
+        Add(command, "@email", string.IsNullOrWhiteSpace(email) ? DBNull.Value : email);
         Add(command, "@action", action);
         Add(command, "@entityType", entityType);
-        Add(command, "@entityId", entityId ?? (object)DBNull.Value);
+        Add(command, "@entityId", string.IsNullOrWhiteSpace(entityId) ? DBNull.Value : entityId);
         Add(command, "@details", details is null ? DBNull.Value : JsonSerializer.Serialize(details));
         Add(command, "@created", DateTime.UtcNow);
         await command.ExecuteNonQueryAsync(ct);
