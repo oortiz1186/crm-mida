@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { CssBaseline, ThemeProvider } from '@mui/material'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import App from './App'
 import ProspectsApp from './ProspectsApp'
 import OpportunitiesApp from './OpportunitiesApp'
@@ -16,33 +16,39 @@ import UsersAuditApp from './UsersAuditApp'
 import PublicQuoteApp from './PublicQuoteApp'
 import AppShell from './AppShell'
 import { AuthProvider } from './auth/AuthProvider'
+import LoginPage from './auth/LoginPage'
+import ProtectedRoute from './auth/ProtectedRoute'
 import { installAuthPersistence } from './session'
 import { theme } from './theme/theme'
 
 installAuthPersistence()
 
-function PrivateRoutes() {
-  return <Routes>
-    <Route path="/dashboard" element={<DashboardApp />} />
-    <Route path="/administration" element={<AdministrationApp />} />
-    <Route path="/users-audit" element={<UsersAuditApp />} />
-    <Route path="/documents-reports" element={<DocumentsReportsApp />} />
-    <Route path="/prospects" element={<ProspectsApp />} />
-    <Route path="/opportunities" element={<OpportunitiesApp />} />
-    <Route path="/quotes" element={<QuotesApp />} />
-    <Route path="/catalog" element={<CatalogApp />} />
-    <Route path="/licenses" element={<LicensesApp />} />
-    <Route path="/customers" element={<Customer360App />} />
-    <Route path="*" element={<App />} />
-  </Routes>
+function PrivateWorkspace() {
+  return <ProtectedRoute>
+    <AppShell>
+      <Routes>
+        <Route path="/dashboard" element={<DashboardApp />} />
+        <Route path="/administration" element={<AdministrationApp />} />
+        <Route path="/users-audit" element={<UsersAuditApp />} />
+        <Route path="/documents-reports" element={<DocumentsReportsApp />} />
+        <Route path="/prospects" element={<ProspectsApp />} />
+        <Route path="/opportunities" element={<OpportunitiesApp />} />
+        <Route path="/quotes" element={<QuotesApp />} />
+        <Route path="/catalog" element={<CatalogApp />} />
+        <Route path="/licenses" element={<LicensesApp />} />
+        <Route path="/customers" element={<Customer360App />} />
+        <Route path="*" element={<App />} />
+      </Routes>
+    </AppShell>
+  </ProtectedRoute>
 }
 
 function Root() {
-  const location = useLocation()
-  if (location.pathname.startsWith('/public/quotes/')) {
-    return <Routes><Route path="/public/quotes/:token" element={<PublicQuoteApp />} /></Routes>
-  }
-  return <AppShell><PrivateRoutes /></AppShell>
+  return <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/public/quotes/:token" element={<PublicQuoteApp />} />
+    <Route path="/*" element={<PrivateWorkspace />} />
+  </Routes>
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
