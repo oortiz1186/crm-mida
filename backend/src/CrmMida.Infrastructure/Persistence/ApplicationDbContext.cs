@@ -14,6 +14,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<Prospect> Prospects => Set<Prospect>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,28 +54,16 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             entity.ToTable("user_roles");
             entity.HasKey(x => new { x.UserId, x.RoleId });
-            entity.HasOne(x => x.User)
-                .WithMany(x => x.UserRoles)
-                .HasForeignKey(x => x.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Role)
-                .WithMany(x => x.UserRoles)
-                .HasForeignKey(x => x.RoleId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany(x => x.UserRoles).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Role).WithMany(x => x.UserRoles).HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RolePermission>(entity =>
         {
             entity.ToTable("role_permissions");
             entity.HasKey(x => new { x.RoleId, x.PermissionId });
-            entity.HasOne(x => x.Role)
-                .WithMany(x => x.RolePermissions)
-                .HasForeignKey(x => x.RoleId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Permission)
-                .WithMany(x => x.RolePermissions)
-                .HasForeignKey(x => x.PermissionId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Role).WithMany(x => x.RolePermissions).HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Permission).WithMany(x => x.RolePermissions).HasForeignKey(x => x.PermissionId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Company>(entity =>
@@ -98,10 +87,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.ExternalContpaqiId).HasMaxLength(100);
             entity.HasIndex(x => x.Rfc).IsUnique();
             entity.HasIndex(x => x.TradeName);
-            entity.HasOne(x => x.AssignedUser)
-                .WithMany()
-                .HasForeignKey(x => x.AssignedUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Contact>(entity =>
@@ -116,10 +102,28 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(x => x.Mobile).HasMaxLength(30);
             entity.Property(x => x.Email).HasMaxLength(200);
             entity.HasIndex(x => new { x.CompanyId, x.Email });
-            entity.HasOne(x => x.Company)
-                .WithMany(x => x.Contacts)
-                .HasForeignKey(x => x.CompanyId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Company).WithMany(x => x.Contacts).HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Prospect>(entity =>
+        {
+            entity.ToTable("prospects");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.CompanyName).HasMaxLength(250);
+            entity.Property(x => x.Rfc).HasMaxLength(13);
+            entity.Property(x => x.Email).HasMaxLength(200);
+            entity.Property(x => x.Phone).HasMaxLength(30);
+            entity.Property(x => x.Source).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Interest).HasMaxLength(250);
+            entity.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Qualification).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.HasIndex(x => x.Name);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.Email);
+            entity.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.ConvertedCompany).WithMany().HasForeignKey(x => x.ConvertedCompanyId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
