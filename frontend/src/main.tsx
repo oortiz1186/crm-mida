@@ -10,6 +10,7 @@ import CatalogApp from './CatalogApp'
 import LicensesApp from './LicensesApp'
 import Customer360App from './Customer360App'
 import DashboardApp from './DashboardApp'
+import AdministrationApp from './AdministrationApp'
 import PublicQuoteApp from './PublicQuoteApp'
 import { theme } from './theme/theme'
 
@@ -20,6 +21,7 @@ function Root() {
     <Routes>
       <Route path="/public/quotes/:token" element={<PublicQuoteApp />} />
       <Route path="/dashboard" element={<DashboardApp />} />
+      <Route path="/administration" element={<AdministrationApp />} />
       <Route path="/prospects" element={<ProspectsApp />} />
       <Route path="/opportunities" element={<OpportunitiesApp />} />
       <Route path="/quotes" element={<QuotesApp />} />
@@ -37,6 +39,7 @@ function Root() {
       <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
       <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
       <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
+      <Button component={Link} to="/administration" variant="outlined" size="small">Administración</Button>
     </Stack></Box>}
   </>
 }

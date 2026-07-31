@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using CrmMida.Api.Administration;
 using CrmMida.Api.Auth;
 using CrmMida.Api.Commercial;
 using CrmMida.Application;
@@ -25,6 +26,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QuotePdfService>();
 builder.Services.AddScoped<QuoteDeliveryService>();
 builder.Services.AddScoped<LicenseAlertProcessor>();
+builder.Services.AddScoped<AuditService>();
 builder.Services.AddHostedService<LicenseAlertBackgroundService>();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -104,6 +106,7 @@ app.MapLicenseDashboardEndpoints();
 app.MapLicenseAlertEndpoints();
 app.MapCustomer360Endpoints();
 app.MapAgendaDashboardEndpoints();
+app.MapImportAuditEndpoints();
 
 app.Run();
 public partial class Program;
