@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using CrmMida.Api.Auth;
+using CrmMida.Api.Commercial;
 using CrmMida.Application;
 using CrmMida.Application.Security;
 using CrmMida.Infrastructure;
@@ -64,7 +65,20 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in new[]
+    {
+        "companies.read",
+        "companies.manage",
+        "contacts.read",
+        "contacts.manage"
+    })
+    {
+        options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+    }
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -79,6 +93,7 @@ app.UseExceptionHandler();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CommercialAuthorizationMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -89,7 +104,7 @@ if (app.Environment.IsDevelopment())
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await dbContext.Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<AuthSeeder>().SeedAsync();
 }
 
@@ -166,6 +181,8 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
         roles,
         permissions));
 }).RequireAuthorization();
+
+app.MapCommercialEndpoints();
 
 app.Run();
 
