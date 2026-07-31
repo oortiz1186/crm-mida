@@ -96,6 +96,7 @@ app.MapOpportunityEndpoints();
 app.MapQuoteEndpoints();
 app.MapCatalogEndpoints();
 app.MapQuotePortalEndpoints();
+app.MapQuoteAccessManagementEndpoints();
 
 app.Run();
 public partial class Program;
