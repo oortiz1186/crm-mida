@@ -4,6 +4,7 @@ import { Box, Button, CssBaseline, Stack, ThemeProvider } from '@mui/material'
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import App from './App'
 import ProspectsApp from './ProspectsApp'
+import OpportunitiesApp from './OpportunitiesApp'
 import { theme } from './theme/theme'
 
 function Root() {
@@ -11,12 +12,14 @@ function Root() {
     <>
       <Routes>
         <Route path="/prospects" element={<ProspectsApp />} />
+        <Route path="/opportunities" element={<OpportunitiesApp />} />
         <Route path="*" element={<App />} />
       </Routes>
       <Box position="fixed" bottom={16} right={16} zIndex={1600}>
         <Stack direction="row" spacing={1}>
           <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
-          <Button component={Link} to="/prospects" variant="contained" size="small">Prospectos</Button>
+          <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
+          <Button component={Link} to="/opportunities" variant="contained" size="small">Pipeline</Button>
         </Stack>
       </Box>
     </>
