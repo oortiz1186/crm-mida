@@ -13,7 +13,8 @@ public sealed class AuthSeeder(ApplicationDbContext dbContext, IPasswordHasher p
         "companies.read", "companies.manage", "contacts.read", "contacts.manage",
         "prospects.read", "prospects.manage", "opportunities.read", "opportunities.manage",
         "activities.read", "activities.manage", "quotes.read", "quotes.manage",
-        "catalog.read", "catalog.manage", "licenses.read", "licenses.manage"
+        "catalog.read", "catalog.manage", "licenses.read", "licenses.manage",
+        "integration.manage"
     ];
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)

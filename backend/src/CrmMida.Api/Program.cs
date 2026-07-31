@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using CrmMida.Api.Auth;
 using CrmMida.Api.Commercial;
+using CrmMida.Api.Integrations;
 using CrmMida.Application;
 using CrmMida.Application.Security;
 using CrmMida.Infrastructure;
@@ -25,6 +26,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QuotePdfService>();
 builder.Services.AddScoped<QuoteDeliveryService>();
 builder.Services.AddScoped<LicenseAlertProcessor>();
+builder.Services.AddScoped<ContpaqiConnectionService>();
 builder.Services.AddHostedService<LicenseAlertBackgroundService>();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -50,7 +52,8 @@ builder.Services.AddAuthorization(options =>
         "companies.read", "companies.manage", "contacts.read", "contacts.manage",
         "prospects.read", "prospects.manage", "opportunities.read", "opportunities.manage",
         "activities.read", "activities.manage", "quotes.read", "quotes.manage",
-        "catalog.read", "catalog.manage", "licenses.read", "licenses.manage"
+        "catalog.read", "catalog.manage", "licenses.read", "licenses.manage",
+        "integration.manage"
     }) options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
 });
 
@@ -102,6 +105,7 @@ app.MapQuoteAccessManagementEndpoints();
 app.MapLicenseEndpoints();
 app.MapLicenseDashboardEndpoints();
 app.MapLicenseAlertEndpoints();
+app.MapContpaqiEndpoints();
 
 app.Run();
 public partial class Program;
