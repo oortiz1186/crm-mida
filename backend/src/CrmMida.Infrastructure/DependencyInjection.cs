@@ -21,6 +21,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<AuthSeeder>();
 
         return services;
     }
