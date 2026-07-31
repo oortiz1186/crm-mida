@@ -76,7 +76,7 @@ public static class Customer360Endpoints
                 .ToListAsync(ct);
 
             var quotes = await db.Quotes.AsNoTracking()
-                .Where(x => x.CompanyId == companyId && x.IsActive)
+                .Where(x => x.CompanyId == companyId)
                 .OrderByDescending(x => x.CreatedAtUtc)
                 .Select(x => new
                 {
