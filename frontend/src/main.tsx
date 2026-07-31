@@ -9,6 +9,7 @@ import QuotesApp from './QuotesApp'
 import CatalogApp from './CatalogApp'
 import LicensesApp from './LicensesApp'
 import Customer360App from './Customer360App'
+import DashboardApp from './DashboardApp'
 import PublicQuoteApp from './PublicQuoteApp'
 import { theme } from './theme/theme'
 
@@ -18,6 +19,7 @@ function Root() {
   return <>
     <Routes>
       <Route path="/public/quotes/:token" element={<PublicQuoteApp />} />
+      <Route path="/dashboard" element={<DashboardApp />} />
       <Route path="/prospects" element={<ProspectsApp />} />
       <Route path="/opportunities" element={<OpportunitiesApp />} />
       <Route path="/quotes" element={<QuotesApp />} />
@@ -27,8 +29,9 @@ function Root() {
       <Route path="*" element={<App />} />
     </Routes>
     {!isPublicPortal && <Box position="fixed" bottom={16} right={16} zIndex={1600}><Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
+      <Button component={Link} to="/dashboard" variant="contained" size="small">Dashboard</Button>
       <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
-      <Button component={Link} to="/customers" variant="contained" size="small">Cliente 360°</Button>
+      <Button component={Link} to="/customers" variant="outlined" size="small">Cliente 360°</Button>
       <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
       <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
       <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>

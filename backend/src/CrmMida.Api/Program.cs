@@ -103,6 +103,7 @@ app.MapLicenseEndpoints();
 app.MapLicenseDashboardEndpoints();
 app.MapLicenseAlertEndpoints();
 app.MapCustomer360Endpoints();
+app.MapAgendaDashboardEndpoints();
 
 app.Run();
 public partial class Program;
