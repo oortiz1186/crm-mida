@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   AppBar, Avatar, Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon,
   ListItemText, Menu, MenuItem, Stack, Toolbar, Tooltip, Typography, useMediaQuery,
@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import GlobalSearch from './GlobalSearch'
-import { clearStoredSession, getStoredToken, getStoredUser, subscribeToSession, type StoredUser } from './session'
+import { useAuth } from './auth/AuthProvider'
 import { useTheme } from '@mui/material/styles'
 
 const drawerWidth = 264
@@ -36,25 +36,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const mobile = useMediaQuery(theme.breakpoints.down('md'))
   const location = useLocation()
   const navigate = useNavigate()
+  const { token, user, logout, hasAnyPermission } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [user, setUser] = useState<StoredUser | null>(() => getStoredUser())
-  const [token, setToken] = useState(() => getStoredToken())
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
 
-  useEffect(() => subscribeToSession(() => {
-    setToken(getStoredToken())
-    setUser(getStoredUser())
-  }), [])
-
-  const visibleItems = useMemo(() => {
-    if (!user) return items
-    return items.filter(item => !item.anyPermission || item.anyPermission.some(permission => user.permissions.includes(permission)))
-  }, [user])
+  const visibleItems = useMemo(() => items.filter(item => !item.anyPermission || hasAnyPermission(item.anyPermission)), [hasAnyPermission, user])
 
   if (!token) return <>{children}</>
 
-  const logout = () => {
-    clearStoredSession()
+  const handleLogout = () => {
+    logout()
     setAnchor(null)
     navigate('/')
     window.location.reload()
@@ -110,7 +101,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Typography variant="caption" color="text.secondary">{user?.roles.join(', ') || 'Sin rol'}</Typography>
           </Box>
           <Divider />
-          <MenuItem onClick={logout}><LogoutOutlined fontSize="small" sx={{ mr: 1 }} />Cerrar sesión</MenuItem>
+          <MenuItem onClick={handleLogout}><LogoutOutlined fontSize="small" sx={{ mr: 1 }} />Cerrar sesión</MenuItem>
         </Menu>
       </Toolbar>
     </AppBar>
