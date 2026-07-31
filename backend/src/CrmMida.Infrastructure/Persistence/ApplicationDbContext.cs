@@ -15,6 +15,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Prospect> Prospects => Set<Prospect>();
+    public DbSet<Opportunity> Opportunities => Set<Opportunity>();
+    public DbSet<Activity> Activities => Set<Activity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,6 +126,42 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.HasIndex(x => x.Email);
             entity.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(x => x.ConvertedCompany).WithMany().HasForeignKey(x => x.ConvertedCompanyId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Opportunity>(entity =>
+        {
+            entity.ToTable("opportunities");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(220).IsRequired();
+            entity.Property(x => x.ProductOrService).HasMaxLength(250);
+            entity.Property(x => x.EstimatedAmount).HasPrecision(18, 2);
+            entity.Property(x => x.Stage).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.LossReason).HasMaxLength(500);
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.HasIndex(x => x.Stage);
+            entity.HasIndex(x => x.ExpectedCloseDateUtc);
+            entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Contact).WithMany().HasForeignKey(x => x.ContactId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Prospect).WithMany().HasForeignKey(x => x.ProspectId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Activity>(entity =>
+        {
+            entity.ToTable("activities");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Type).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(220).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.Priority).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+            entity.HasIndex(x => x.DueAtUtc);
+            entity.HasIndex(x => x.Status);
+            entity.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Opportunity).WithMany(x => x.Activities).HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Prospect).WithMany().HasForeignKey(x => x.ProspectId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
