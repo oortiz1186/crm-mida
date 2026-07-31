@@ -48,7 +48,7 @@ builder.Services.AddAuthorization(options =>
         "companies.read", "companies.manage", "contacts.read", "contacts.manage",
         "prospects.read", "prospects.manage", "opportunities.read", "opportunities.manage",
         "activities.read", "activities.manage", "quotes.read", "quotes.manage",
-        "catalog.read", "catalog.manage"
+        "catalog.read", "catalog.manage", "licenses.read", "licenses.manage"
     }) options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
 });
 
@@ -97,6 +97,7 @@ app.MapQuoteEndpoints();
 app.MapCatalogEndpoints();
 app.MapQuotePortalEndpoints();
 app.MapQuoteAccessManagementEndpoints();
+app.MapLicenseEndpoints();
 
 app.Run();
 public partial class Program;
