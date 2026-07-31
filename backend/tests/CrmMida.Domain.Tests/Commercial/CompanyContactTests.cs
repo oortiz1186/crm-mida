@@ -1,4 +1,5 @@
 using CrmMida.Domain.Commercial;
+using Xunit;
 
 namespace CrmMida.Domain.Tests.Commercial;
 
