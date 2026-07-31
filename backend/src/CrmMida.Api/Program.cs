@@ -20,8 +20,10 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QuotePdfService>();
+builder.Services.AddScoped<QuoteDeliveryService>();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme { Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header });

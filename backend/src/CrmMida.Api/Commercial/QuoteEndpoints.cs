@@ -37,6 +37,36 @@ public static class QuoteEndpoints
             return Results.File(bytes, "application/pdf", $"{quote.Folio}.pdf");
         }).RequireAuthorization("quotes.read");
 
+        group.MapPost("/{id:guid}/send", async (
+            Guid id,
+            SendQuoteRequest request,
+            ApplicationDbContext db,
+            QuoteDeliveryService deliveryService,
+            CancellationToken ct) =>
+        {
+            var quote = await db.Quotes
+                .Include(x => x.Company)
+                .Include(x => x.Items)
+                .SingleOrDefaultAsync(x => x.Id == id, ct);
+
+            if (quote is null) return Results.NotFound();
+            if (quote.Items.Count == 0) return Results.BadRequest(new { message = "La cotización no tiene partidas." });
+
+            var result = await deliveryService.SendAsync(quote, request.Channel, request.Recipient, request.Message, ct);
+            if (result.Status == "sent" && quote.Status == "draft")
+            {
+                quote.MarkSent();
+                await db.SaveChangesAsync(ct);
+            }
+
+            return result.Status switch
+            {
+                "sent" => Results.Ok(result),
+                "not_configured" => Results.Conflict(result),
+                _ => Results.BadRequest(result)
+            };
+        }).RequireAuthorization("quotes.manage");
+
         group.MapPost("/", async (SaveQuoteRequest request, ApplicationDbContext db, CancellationToken ct) =>
         {
             if (!await db.Companies.AnyAsync(x => x.Id == request.CompanyId && x.IsActive, ct)) return Results.BadRequest(new { message = "La empresa no existe." });
@@ -102,5 +132,6 @@ public static class QuoteEndpoints
 public sealed record SaveQuoteRequest(Guid CompanyId, Guid? ContactId, Guid? OpportunityId, string Title, string Currency, decimal Discount, DateTime ValidUntilUtc, string? Notes, IReadOnlyCollection<SaveQuoteItemRequest> Items);
 public sealed record SaveQuoteItemRequest(string Description, decimal Quantity, decimal UnitPrice, decimal TaxRate);
 public sealed record ChangeQuoteStatusRequest(string Status);
+public sealed record SendQuoteRequest(string Channel, string Recipient, string? Message);
 public sealed record QuoteDto(Guid Id, string Folio, Guid CompanyId, string CompanyName, Guid? ContactId, Guid? OpportunityId, string Title, string Currency, decimal Discount, decimal Subtotal, decimal Tax, decimal Total, DateTime ValidUntilUtc, string Status, string? Notes, IReadOnlyCollection<QuoteItemDto> Items);
 public sealed record QuoteItemDto(Guid Id, string Description, decimal Quantity, decimal UnitPrice, decimal TaxRate, decimal Subtotal, decimal Tax, decimal Total);
