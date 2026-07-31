@@ -8,6 +8,7 @@ import OpportunitiesApp from './OpportunitiesApp'
 import QuotesApp from './QuotesApp'
 import CatalogApp from './CatalogApp'
 import LicensesApp from './LicensesApp'
+import Customer360App from './Customer360App'
 import PublicQuoteApp from './PublicQuoteApp'
 import { theme } from './theme/theme'
 
@@ -22,15 +23,17 @@ function Root() {
       <Route path="/quotes" element={<QuotesApp />} />
       <Route path="/catalog" element={<CatalogApp />} />
       <Route path="/licenses" element={<LicensesApp />} />
+      <Route path="/customers" element={<Customer360App />} />
       <Route path="*" element={<App />} />
     </Routes>
-    {!isPublicPortal && <Box position="fixed" bottom={16} right={16} zIndex={1600}><Stack direction="row" spacing={1}>
+    {!isPublicPortal && <Box position="fixed" bottom={16} right={16} zIndex={1600}><Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
       <Button component={Link} to="/" variant="outlined" size="small">Empresas</Button>
+      <Button component={Link} to="/customers" variant="contained" size="small">Cliente 360°</Button>
       <Button component={Link} to="/prospects" variant="outlined" size="small">Prospectos</Button>
       <Button component={Link} to="/opportunities" variant="outlined" size="small">Pipeline</Button>
       <Button component={Link} to="/quotes" variant="outlined" size="small">Cotizaciones</Button>
       <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
-      <Button component={Link} to="/licenses" variant="contained" size="small">Licencias</Button>
+      <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
     </Stack></Box>}
   </>
 }

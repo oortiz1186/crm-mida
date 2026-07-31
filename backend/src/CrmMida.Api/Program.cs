@@ -102,6 +102,7 @@ app.MapQuoteAccessManagementEndpoints();
 app.MapLicenseEndpoints();
 app.MapLicenseDashboardEndpoints();
 app.MapLicenseAlertEndpoints();
+app.MapCustomer360Endpoints();
 
 app.Run();
 public partial class Program;
