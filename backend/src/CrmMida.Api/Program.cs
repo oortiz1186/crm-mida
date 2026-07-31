@@ -72,7 +72,9 @@ builder.Services.AddAuthorization(options =>
         "companies.read",
         "companies.manage",
         "contacts.read",
-        "contacts.manage"
+        "contacts.manage",
+        "prospects.read",
+        "prospects.manage"
     })
     {
         options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
@@ -130,10 +132,7 @@ app.MapPost("/api/v1/auth/login", async (
                     .ThenInclude(x => x.Permission)
         .SingleOrDefaultAsync(x => x.Email == email, cancellationToken);
 
-    if (user is null || !user.CanLogin(DateTime.UtcNow))
-    {
-        return Results.Unauthorized();
-    }
+    if (user is null || !user.CanLogin(DateTime.UtcNow)) return Results.Unauthorized();
 
     if (!passwordHasher.Verify(request.Password, user.PasswordHash))
     {
@@ -166,10 +165,7 @@ app.MapPost("/api/v1/auth/login", async (
 app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
 {
     var idValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (!Guid.TryParse(idValue, out var id))
-    {
-        return Results.Unauthorized();
-    }
+    if (!Guid.TryParse(idValue, out var id)) return Results.Unauthorized();
 
     var roles = principal.FindAll(ClaimTypes.Role).Select(x => x.Value).Distinct().ToArray();
     var permissions = principal.FindAll("permission").Select(x => x.Value).Distinct().ToArray();
@@ -183,6 +179,7 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
 }).RequireAuthorization();
 
 app.MapCommercialEndpoints();
+app.MapProspectEndpoints();
 
 app.Run();
 
