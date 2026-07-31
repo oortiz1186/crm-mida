@@ -29,6 +29,42 @@ public sealed class User : BaseEntity
     public bool CanLogin(DateTime utcNow) =>
         IsActive && (!LockedUntilUtc.HasValue || LockedUntilUtc.Value <= utcNow);
 
+    public void UpdateProfile(string firstName, string lastName, string email)
+    {
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+        Email = email.Trim().ToLowerInvariant();
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void ChangePassword(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+        PasswordChangedAtUtc = DateTime.UtcNow;
+        FailedLoginAttempts = 0;
+        LockedUntilUtc = null;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void Activate()
+    {
+        IsActive = true;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void Unlock()
+    {
+        FailedLoginAttempts = 0;
+        LockedUntilUtc = null;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
     public void RegisterSuccessfulLogin()
     {
         LastLoginAtUtc = DateTime.UtcNow;
