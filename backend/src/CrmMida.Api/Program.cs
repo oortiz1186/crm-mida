@@ -74,7 +74,11 @@ builder.Services.AddAuthorization(options =>
         "contacts.read",
         "contacts.manage",
         "prospects.read",
-        "prospects.manage"
+        "prospects.manage",
+        "opportunities.read",
+        "opportunities.manage",
+        "activities.read",
+        "activities.manage"
     })
     {
         options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
@@ -180,6 +184,7 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
 
 app.MapCommercialEndpoints();
 app.MapProspectEndpoints();
+app.MapOpportunityEndpoints();
 
 app.Run();
 
