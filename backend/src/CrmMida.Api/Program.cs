@@ -65,7 +65,20 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in new[]
+    {
+        "companies.read",
+        "companies.manage",
+        "contacts.read",
+        "contacts.manage"
+    })
+    {
+        options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+    }
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
