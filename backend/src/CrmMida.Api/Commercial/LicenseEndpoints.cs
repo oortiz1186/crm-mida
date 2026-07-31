@@ -60,9 +60,23 @@ public static class LicenseEndpoints
             if (license is null) return Results.NotFound();
             if (await db.RenewalOpportunities.AnyAsync(x => x.LicenseId == id && x.Status == "pending", ct)) return Results.Conflict(new { message = "Ya existe una renovación pendiente." });
 
-            var renewal = new RenewalOpportunity(id, request.TargetDateUtc ?? license.ExpiresAtUtc, request.EstimatedAmount);
-            var opportunity = new Opportunity($"Renovación {license.ProductName} · {license.SerialNumber}", license.CompanyId, request.EstimatedAmount, request.TargetDateUtc ?? license.ExpiresAtUtc);
-            opportunity.Update($"Renovación {license.ProductName} · {license.SerialNumber}", "Renovación de licencia", request.EstimatedAmount, 50, request.TargetDateUtc ?? license.ExpiresAtUtc, "prospecting", null, $"Serie {license.SerialNumber}", null, null);
+            var targetDate = request.TargetDateUtc ?? license.ExpiresAtUtc;
+            var renewal = new RenewalOpportunity(id, targetDate, request.EstimatedAmount);
+            var opportunity = new Opportunity($"Renovación {license.ProductName} · {license.SerialNumber}", license.CompanyId, request.EstimatedAmount);
+            opportunity.Update(
+                $"Renovación {license.ProductName} · {license.SerialNumber}",
+                license.CompanyId,
+                null,
+                null,
+                null,
+                "Renovación de licencia",
+                request.EstimatedAmount,
+                50,
+                targetDate,
+                "prospecting",
+                "open",
+                null,
+                $"Serie {license.SerialNumber}");
             db.Opportunities.Add(opportunity);
             renewal.LinkOpportunity(opportunity.Id);
             db.RenewalOpportunities.Add(renewal);
@@ -72,7 +86,7 @@ public static class LicenseEndpoints
 
         group.MapPost("/{id:guid}/renew", async (Guid id, RenewLicenseRequest request, ApplicationDbContext db, CancellationToken ct) =>
         {
-            var license = await db.Licenses.SingleOrDefaultAsync(x => x.Id == id, ct);
+            var license = await db.Licenses.Include(x => x.Company).SingleOrDefaultAsync(x => x.Id == id, ct);
             if (license is null) return Results.NotFound();
             license.Renew(request.NewExpiresAtUtc);
             var renewal = await db.RenewalOpportunities.Where(x => x.LicenseId == id && x.Status == "pending").OrderByDescending(x => x.CreatedAtUtc).FirstOrDefaultAsync(ct);
