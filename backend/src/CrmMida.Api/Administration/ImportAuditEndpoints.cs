@@ -175,8 +175,8 @@ public static class ImportAuditEndpoints
             """;
         Add(command, "@id", id); Add(command, "@file", fileName); Add(command, "@status", status);
         Add(command, "@created", created); Add(command, "@skipped", skipped); Add(command, "@errors", errors);
-        Add(command, "@started", started); Add(command, "@completed", completed ?? (object)DBNull.Value);
-        Add(command, "@error", error ?? (object)DBNull.Value);
+        Add(command, "@started", started); Add(command, "@completed", completed.HasValue ? completed.Value : DBNull.Value);
+        Add(command, "@error", string.IsNullOrWhiteSpace(error) ? DBNull.Value : error);
         await command.ExecuteNonQueryAsync(ct);
     }
 
