@@ -116,7 +116,7 @@ public static class ImportAuditEndpoints
                 {
                     id = reader.GetGuid(0), fileName = reader.GetString(1), status = reader.GetString(2),
                     createdRecords = reader.GetInt32(3), skippedRecords = reader.GetInt32(4), errorRecords = reader.GetInt32(5),
-                    startedAtUtc = reader.GetDateTime(6), completedAtUtc = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    startedAtUtc = reader.GetDateTime(6), completedAtUtc = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7),
                     errorMessage = reader.IsDBNull(8) ? null : reader.GetString(8)
                 });
             return Results.Ok(rows);
@@ -148,7 +148,7 @@ public static class ImportAuditEndpoints
             while (await reader.ReadAsync(ct))
                 rows.Add(new
                 {
-                    id = reader.GetGuid(0), userId = reader.IsDBNull(1) ? null : reader.GetGuid(1),
+                    id = reader.GetGuid(0), userId = reader.IsDBNull(1) ? (Guid?)null : reader.GetGuid(1),
                     userEmail = reader.IsDBNull(2) ? null : reader.GetString(2), action = reader.GetString(3),
                     entityType = reader.GetString(4), entityId = reader.IsDBNull(5) ? null : reader.GetString(5),
                     detailsJson = reader.IsDBNull(6) ? null : reader.GetString(6), createdAtUtc = reader.GetDateTime(7)
