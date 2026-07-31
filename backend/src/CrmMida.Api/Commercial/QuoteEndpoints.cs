@@ -20,8 +20,8 @@ public static class QuoteEndpoints
             }
             if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToLower());
 
-            var items = await query.OrderByDescending(x => x.CreatedAtUtc).Select(x => ToDto(x)).ToListAsync(ct);
-            return Results.Ok(items);
+            var entities = await query.OrderByDescending(x => x.CreatedAtUtc).ToListAsync(ct);
+            return Results.Ok(entities.Select(ToDto).ToArray());
         }).RequireAuthorization("quotes.read");
 
         group.MapGet("/{id:guid}", async (Guid id, ApplicationDbContext db, CancellationToken ct) =>
@@ -34,6 +34,7 @@ public static class QuoteEndpoints
         {
             if (!await db.Companies.AnyAsync(x => x.Id == request.CompanyId && x.IsActive, ct)) return Results.BadRequest(new { message = "La empresa no existe." });
             if (request.ContactId.HasValue && !await db.Contacts.AnyAsync(x => x.Id == request.ContactId && x.CompanyId == request.CompanyId && x.IsActive, ct)) return Results.BadRequest(new { message = "El contacto no pertenece a la empresa." });
+            if (request.Items.Count == 0) return Results.BadRequest(new { message = "Agrega al menos una partida." });
 
             var quote = new Quote(request.CompanyId, request.Title, request.ValidUntilUtc, request.OpportunityId, request.ContactId);
             quote.SetFolio(await NextFolioAsync(db, ct));
@@ -50,11 +51,11 @@ public static class QuoteEndpoints
         {
             var quote = await db.Quotes.Include(x => x.Items).Include(x => x.Company).SingleOrDefaultAsync(x => x.Id == id, ct);
             if (quote is null) return Results.NotFound();
+            if (request.Items.Count == 0) return Results.BadRequest(new { message = "Agrega al menos una partida." });
 
             quote.Update(request.Title, request.ValidUntilUtc, request.Currency, request.Discount, request.Notes, request.ContactId, request.OpportunityId);
-            db.QuoteItems.RemoveRange(quote.Items);
+            foreach (var itemId in quote.Items.Select(x => x.Id).ToArray()) quote.RemoveItem(itemId);
             foreach (var item in request.Items) quote.AddItem(item.Description, item.Quantity, item.UnitPrice, item.TaxRate);
-            quote.Recalculate();
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToDto(quote));
         }).RequireAuthorization("quotes.manage");
