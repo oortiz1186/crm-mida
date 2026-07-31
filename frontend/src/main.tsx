@@ -12,6 +12,7 @@ import Customer360App from './Customer360App'
 import DashboardApp from './DashboardApp'
 import AdministrationApp from './AdministrationApp'
 import DocumentsReportsApp from './DocumentsReportsApp'
+import UsersAuditApp from './UsersAuditApp'
 import PublicQuoteApp from './PublicQuoteApp'
 import { theme } from './theme/theme'
 
@@ -23,6 +24,7 @@ function Root() {
       <Route path="/public/quotes/:token" element={<PublicQuoteApp />} />
       <Route path="/dashboard" element={<DashboardApp />} />
       <Route path="/administration" element={<AdministrationApp />} />
+      <Route path="/users-audit" element={<UsersAuditApp />} />
       <Route path="/documents-reports" element={<DocumentsReportsApp />} />
       <Route path="/prospects" element={<ProspectsApp />} />
       <Route path="/opportunities" element={<OpportunitiesApp />} />
@@ -42,6 +44,7 @@ function Root() {
       <Button component={Link} to="/catalog" variant="outlined" size="small">Catálogo</Button>
       <Button component={Link} to="/licenses" variant="outlined" size="small">Licencias</Button>
       <Button component={Link} to="/documents-reports" variant="outlined" size="small">Documentos</Button>
+      <Button component={Link} to="/users-audit" variant="outlined" size="small">Usuarios</Button>
       <Button component={Link} to="/administration" variant="outlined" size="small">Administración</Button>
     </Stack></Box>}
   </>
