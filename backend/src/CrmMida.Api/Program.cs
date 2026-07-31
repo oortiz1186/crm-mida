@@ -64,6 +64,7 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<CommercialAuthorizationMiddleware>();
+app.UseMiddleware<AuditTrailMiddleware>();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
@@ -108,6 +109,7 @@ app.MapCustomer360Endpoints();
 app.MapAgendaDashboardEndpoints();
 app.MapImportAuditEndpoints();
 app.MapDocumentsReportsEndpoints();
+app.MapUserAdministrationEndpoints();
 
 app.Run();
 public partial class Program;
