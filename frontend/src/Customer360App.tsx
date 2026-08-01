@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Container, Divider, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { apiJson } from './api/apiClient'
 
-const api = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-
-type Session = { accessToken: string }
 type CompanyItem = { id: string; tradeName: string; businessName: string; rfc: string }
 type Paged<T> = { items: T[] }
 type Customer360 = {
@@ -17,20 +15,20 @@ type Customer360 = {
 }
 
 export default function Customer360App(){
-  const[email,setEmail]=useState(''); const[password,setPassword]=useState(''); const[session,setSession]=useState<Session|null>(null); const[error,setError]=useState(''); const[loading,setLoading]=useState(false)
-  async function login(e:FormEvent){e.preventDefault();setLoading(true);setError('');try{const r=await fetch(`${api}/api/v1/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});if(!r.ok)throw new Error('Acceso incorrecto.');setSession(await r.json())}catch(x){setError(x instanceof Error?x.message:'Error')}finally{setLoading(false)}}
-  if(!session)return <Container maxWidth="sm" sx={{py:10}}><Card><CardContent><Stack component="form" spacing={2} onSubmit={login}><Typography variant="overline">CRM MIDA</Typography><Typography variant="h4">Cliente 360°</Typography><Typography color="text.secondary">Consulta toda la relación comercial desde una sola vista.</Typography>{error&&<Alert severity="error">{error}</Alert>}<TextField label="Correo" type="email" required value={email} onChange={e=>setEmail(e.target.value)}/><TextField label="Contraseña" type="password" required value={password} onChange={e=>setPassword(e.target.value)}/><Button type="submit" variant="contained" disabled={loading}>{loading?<CircularProgress size={22}/>: 'Ingresar'}</Button></Stack></CardContent></Card></Container>
-  return <Workspace token={session.accessToken}/>
-}
+  const[companies,setCompanies]=useState<CompanyItem[]>([])
+  const[companyId,setCompanyId]=useState('')
+  const[data,setData]=useState<Customer360|null>(null)
+  const[tab,setTab]=useState(0)
+  const[loading,setLoading]=useState(false)
+  const[error,setError]=useState('')
 
-function Workspace({token}:{token:string}){
-  const headers=useMemo(()=>({Authorization:`Bearer ${token}`}),[token]); const[companies,setCompanies]=useState<CompanyItem[]>([]); const[companyId,setCompanyId]=useState(''); const[data,setData]=useState<Customer360|null>(null); const[tab,setTab]=useState(0); const[loading,setLoading]=useState(false); const[error,setError]=useState('')
-  useEffect(()=>{void (async()=>{const r=await fetch(`${api}/api/v1/companies?page=1&pageSize=100`,{headers});if(r.ok)setCompanies(((await r.json()) as Paged<CompanyItem>).items)})()},[])
-  async function load(id=companyId){if(!id)return;setLoading(true);setError('');const r=await fetch(`${api}/api/v1/customers/${id}/360`,{headers});if(!r.ok){setError('No fue posible cargar Cliente 360°.');setLoading(false);return}setData(await r.json());setTab(0);setLoading(false)}
+  useEffect(()=>{void (async()=>{try{const result=await apiJson<Paged<CompanyItem>>('/api/v1/companies?page=1&pageSize=100');setCompanies(result.items)}catch{setError('No fue posible cargar las empresas.') }})()},[])
+  async function load(id=companyId){if(!id)return;setLoading(true);setError('');try{setData(await apiJson<Customer360>(`/api/v1/customers/${id}/360`));setTab(0)}catch{setError('No fue posible cargar Cliente 360°.')}finally{setLoading(false)}}
   const money=(v:number)=>v.toLocaleString('es-MX',{style:'currency',currency:'MXN'})
+
   return <Box minHeight="100vh" bgcolor="background.default"><Container maxWidth="xl" sx={{py:5}}><Stack spacing={3}>
     <Box><Typography variant="overline">Núcleo de relación con clientes</Typography><Typography variant="h3">Cliente 360°</Typography><Typography color="text.secondary">Contactos, pipeline, cotizaciones, actividades, licencias y renovaciones internas del CRM.</Typography></Box>
-    {error&&<Alert severity="error">{error}</Alert>}
+    {error&&<Alert severity="error" onClose={()=>setError('')}>{error}</Alert>}
     <Paper sx={{p:2}}><Stack direction={{xs:'column',md:'row'}} spacing={2}><TextField select fullWidth label="Empresa" value={companyId} onChange={e=>setCompanyId(e.target.value)}>{companies.map(c=><MenuItem key={c.id} value={c.id}>{c.tradeName} · {c.rfc}</MenuItem>)}</TextField><Button variant="contained" onClick={()=>void load()} disabled={!companyId||loading}>Abrir Cliente 360°</Button></Stack></Paper>
     {loading&&<Box textAlign="center"><CircularProgress/></Box>}
     {data&&<>
