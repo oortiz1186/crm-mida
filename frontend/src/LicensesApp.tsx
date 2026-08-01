@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Add, Autorenew, History } from '@mui/icons-material'
 import {
   Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Container,
   Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography,
 } from '@mui/material'
+import { apiFetch, apiJson } from './api/apiClient'
+import { useAuth } from './auth/AuthProvider'
 
-const api = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-
-interface Session { accessToken: string }
 interface Company { id: string; tradeName: string }
 interface License {
   id: string; companyId: string; companyName: string; productName: string; serialNumber: string;
@@ -17,28 +16,11 @@ interface License {
 }
 interface Dashboard { expired: number; expiring30: number; expiring60: number; expiring90: number; active: number; total: number }
 interface Renewal { id: string; targetDateUtc: string; estimatedAmount: number; status: string; opportunityId?: string; notes?: string; createdAtUtc: string; completedAtUtc?: string }
+interface Paged<T> { items: T[] }
 
 export default function LicensesApp() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [session, setSession] = useState<Session | null>(null)
-  const [error, setError] = useState('')
-
-  async function login(event: FormEvent) {
-    event.preventDefault()
-    const response = await fetch(`${api}/api/v1/auth/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
-    })
-    if (!response.ok) return setError('Acceso incorrecto.')
-    setSession(await response.json())
-  }
-
-  if (!session) return <Container maxWidth="sm" sx={{ py: 10 }}><Card><CardContent><Stack component="form" spacing={2} onSubmit={login}><Typography variant="h4">Licencias MIDA</Typography>{error && <Alert severity="error">{error}</Alert>}<TextField label="Correo" value={email} onChange={event => setEmail(event.target.value)} required /><TextField label="Contraseña" type="password" value={password} onChange={event => setPassword(event.target.value)} required /><Button type="submit" variant="contained">Ingresar</Button></Stack></CardContent></Card></Container>
-  return <Workspace token={session.accessToken} />
-}
-
-function Workspace({ token }: { token: string }) {
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
+  const { hasPermission } = useAuth()
+  const canManage = hasPermission('licenses.manage')
   const [licenses, setLicenses] = useState<License[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
@@ -54,18 +36,18 @@ function Workspace({ token }: { token: string }) {
 
   async function load() {
     setLoading(true)
+    setError('')
     try {
-      const [licensesResponse, dashboardResponse, companiesResponse] = await Promise.all([
-        fetch(`${api}/api/v1/licenses`, { headers }),
-        fetch(`${api}/api/v1/licenses/dashboard`, { headers }),
-        fetch(`${api}/api/v1/companies?page=1&pageSize=100`, { headers }),
+      const [licenseItems, dashboardData, companyData] = await Promise.all([
+        apiJson<License[]>('/api/v1/licenses'),
+        apiJson<Dashboard>('/api/v1/licenses/dashboard'),
+        apiJson<Paged<Company>>('/api/v1/companies?page=1&pageSize=100'),
       ])
-      if (!licensesResponse.ok || !dashboardResponse.ok || !companiesResponse.ok) throw new Error('No fue posible cargar licencias.')
-      setLicenses(await licensesResponse.json())
-      setDashboard(await dashboardResponse.json())
-      setCompanies((await companiesResponse.json()).items)
+      setLicenses(licenseItems)
+      setDashboard(dashboardData)
+      setCompanies(companyData.items)
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Error')
+      setError(reason instanceof Error ? reason.message : 'No fue posible cargar licencias.')
     } finally {
       setLoading(false)
     }
@@ -75,8 +57,9 @@ function Workspace({ token }: { token: string }) {
 
   async function save(event: FormEvent) {
     event.preventDefault()
-    const response = await fetch(`${api}/api/v1/licenses`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    setError('')
+    const response = await apiFetch('/api/v1/licenses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
         startsAtUtc: new Date(`${form.startsAtUtc}T12:00:00Z`).toISOString(),
@@ -90,17 +73,18 @@ function Workspace({ token }: { token: string }) {
 
   async function createRenewal(license: License) {
     const amount = Number(prompt('Monto estimado de renovación', '0') ?? '0')
-    const response = await fetch(`${api}/api/v1/licenses/${license.id}/renewals`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    const response = await apiFetch(`/api/v1/licenses/${license.id}/renewals`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetDateUtc: license.expiresAtUtc, estimatedAmount: amount }),
     })
     if (!response.ok) return setError('No fue posible crear la renovación.')
     alert('Renovación y oportunidad comercial creadas.')
+    await load()
   }
 
   async function openHistory(id: string) {
-    const response = await fetch(`${api}/api/v1/licenses/${id}/renewals`, { headers })
-    setHistory(response.ok ? await response.json() : [])
+    try { setHistory(await apiJson<Renewal[]>(`/api/v1/licenses/${id}/renewals`)) }
+    catch { setHistory([]) }
     setHistoryOpen(true)
   }
 
@@ -108,17 +92,16 @@ function Workspace({ token }: { token: string }) {
     ['Total', dashboard?.total], ['Vencidas', dashboard?.expired], ['≤ 30 días', dashboard?.expiring30],
     ['31–60 días', dashboard?.expiring60], ['61–90 días', dashboard?.expiring90], ['> 90 días', dashboard?.active],
   ]
-
   const fieldGrid = { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }
 
   return <Box minHeight="100vh" bgcolor="background.default"><Container maxWidth="xl" sx={{ py: 5 }}><Stack spacing={3}>
-    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="overline">Sprint 5</Typography><Typography variant="h4">Licencias y renovaciones</Typography></Box><Button variant="contained" startIcon={<Add />} onClick={() => setDialog(true)}>Nueva licencia</Button></Stack>
+    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="overline">Comercial</Typography><Typography variant="h4">Licencias y renovaciones</Typography></Box>{canManage && <Button variant="contained" startIcon={<Add />} onClick={() => setDialog(true)}>Nueva licencia</Button>}</Stack>
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(6, minmax(0, 1fr))' }, gap: 2 }}>
       {cards.map(([label, value]) => <Card key={label}><CardContent><Typography color="text.secondary">{label}</Typography><Typography variant="h4">{value ?? 0}</Typography></CardContent></Card>)}
     </Box>
     <TableContainer component={Paper}><Table><TableHead><TableRow><TableCell>Empresa</TableCell><TableCell>Producto</TableCell><TableCell>Serie</TableCell><TableCell>Vence</TableCell><TableCell>Días</TableCell><TableCell>Estado</TableCell><TableCell>Acciones</TableCell></TableRow></TableHead><TableBody>
-      {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress /></TableCell></TableRow> : licenses.map(license => <TableRow key={license.id}><TableCell>{license.companyName}</TableCell><TableCell>{license.productName}</TableCell><TableCell>{license.serialNumber}</TableCell><TableCell>{new Date(license.expiresAtUtc).toLocaleDateString()}</TableCell><TableCell>{license.daysToExpire}</TableCell><TableCell><Chip size="small" label={license.status} color={license.status === 'expired' ? 'error' : license.status === 'expiring' ? 'warning' : 'success'} /></TableCell><TableCell><Button size="small" startIcon={<Autorenew />} onClick={() => void createRenewal(license)}>Renovar</Button><Button size="small" startIcon={<History />} onClick={() => void openHistory(license.id)}>Historial</Button></TableCell></TableRow>)}
+      {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress /></TableCell></TableRow> : licenses.length === 0 ? <TableRow><TableCell colSpan={7} align="center">Sin licencias registradas.</TableCell></TableRow> : licenses.map(license => <TableRow key={license.id}><TableCell>{license.companyName}</TableCell><TableCell>{license.productName}</TableCell><TableCell>{license.serialNumber}</TableCell><TableCell>{new Date(license.expiresAtUtc).toLocaleDateString()}</TableCell><TableCell>{license.daysToExpire}</TableCell><TableCell><Chip size="small" label={license.status} color={license.status === 'expired' ? 'error' : license.status === 'expiring' ? 'warning' : 'success'} /></TableCell><TableCell>{canManage && <Button size="small" startIcon={<Autorenew />} onClick={() => void createRenewal(license)}>Renovar</Button>}<Button size="small" startIcon={<History />} onClick={() => void openHistory(license.id)}>Historial</Button></TableCell></TableRow>)}
     </TableBody></Table></TableContainer>
   </Stack></Container>
 
