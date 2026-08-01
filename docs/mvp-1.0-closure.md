@@ -37,24 +37,28 @@ Estabilizar el núcleo comercial existente y producir una versión utilizable pa
 - [x] AuthProvider central.
 - [x] Empresas sin login local.
 - [x] Prospectos sin login local.
-- [ ] Resto de módulos sin login o sesión local duplicada.
+- [x] Oportunidades y Pipeline sin login local.
+- [x] Catálogo sin login local.
+- [ ] Cotizaciones sin login o sesión local duplicada.
+- [ ] Licencias y Cliente 360° sin sesión local duplicada.
+- [ ] Administración, documentos y usuarios usan cliente API compartido.
 - [ ] Respuestas 401 regresan a `/login`.
-- [ ] Opciones y acciones respetan permisos.
+- [ ] Opciones y acciones respetan permisos en todos los módulos.
 
 ### Funcionalidad
 
 - [ ] Flujo Empresa → Contacto → Oportunidad → Cotización funciona completo.
 - [ ] Flujo Prospecto → Empresa funciona completo.
 - [ ] Flujo Licencia → Renovación → Oportunidad funciona completo.
-- [ ] PDF y portal público de cotización funcionan.
+- [ ] PDF autenticado y portal público de cotización funcionan.
 - [ ] Documentos se cargan y descargan con autenticación.
 - [ ] Importación Excel registra resultado y auditoría.
 
 ### Calidad
 
-- [ ] Backend compila en Release.
-- [ ] Pruebas de dominio pasan.
-- [ ] Frontend compila con TypeScript.
+- [x] Backend compila en Release en el avance actual.
+- [x] Pruebas de dominio pasan en el avance actual.
+- [x] Frontend compila con TypeScript en el avance actual.
 - [ ] No hay secretos en el repositorio.
 - [ ] Configuración de producción documentada.
 - [ ] Migraciones aplican sobre una base vacía.
