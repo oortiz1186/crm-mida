@@ -131,7 +131,7 @@ export default function ProspectsApp() {
         <TableCell><Typography fontWeight={700}>{item.name}</Typography><Typography variant="caption" color="text.secondary">{item.companyName || item.email || 'Sin empresa'}</Typography></TableCell>
         <TableCell>{item.source}</TableCell><TableCell>{item.interest || '—'}</TableCell><TableCell><Chip size="small" label={item.status} color={item.status === 'converted' ? 'success' : 'default'} /></TableCell><TableCell><Chip size="small" label={item.qualification} /></TableCell>
         <TableCell align="right">{canManage && <><IconButton size="small" disabled={item.status === 'converted'} onClick={() => openEdit(item)}><EditOutlined fontSize="small" /></IconButton><IconButton size="small" color="primary" disabled={item.status === 'converted'} onClick={() => openConvert(item)}><SyncAlt fontSize="small" /></IconButton><IconButton size="small" color="error" disabled={item.status === 'converted'} onClick={() => void remove(item)}><DeleteOutline fontSize="small" /></IconButton></>}</TableCell>
-      </Table>)}
+      </TableRow>)}
     </TableBody></Table></TableContainer>
 
     <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md"><Stack component="form" onSubmit={save}><DialogTitle>{editing ? 'Editar prospecto' : 'Nuevo prospecto'}</DialogTitle><DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
