@@ -59,16 +59,22 @@ Estabilizar el núcleo comercial existente y producir una versión utilizable pa
 - [x] Backend compila en Release.
 - [x] Pruebas de dominio pasan.
 - [x] Frontend compila con TypeScript.
-- [ ] No hay secretos en el repositorio.
-- [ ] Configuración de producción documentada.
-- [ ] Migraciones aplican sobre una base vacía.
-- [ ] Smoke test manual documentado y ejecutado.
+- [x] Revisión de patrones de credenciales realizada; solo existen valores de desarrollo o marcadores para reemplazo.
+- [x] Configuración de producción documentada.
+- [ ] Migraciones aplican sobre una base vacía en el entorno real.
+- [x] Smoke test manual documentado.
+- [ ] Smoke test manual ejecutado.
 
 ### Entrega
 
-- [ ] README de instalación actualizado.
-- [ ] Variables de entorno documentadas.
-- [ ] Manual breve de usuario.
-- [ ] Checklist de despliegue.
+- [x] README de instalación actualizado.
+- [x] Variables de entorno documentadas.
+- [x] Manual breve de usuario.
+- [x] Checklist de despliegue y reversión.
+- [x] `.env.example` actualizado sin credenciales reales.
 - [ ] PR final aprobado.
 - [ ] Tag `v1.0.0` después de fusionar.
+
+## Intervención requerida del responsable del entorno
+
+Los puntos pendientes requieren levantar el sistema con PostgreSQL, volumen de documentos y URLs reales. Seguir `docs/despliegue-mvp.md` y registrar el resultado usando `docs/smoke-test-mvp.md`.
