@@ -39,30 +39,30 @@ Estabilizar el núcleo comercial existente y producir una versión utilizable pa
 - [x] Prospectos sin login local.
 - [x] Oportunidades y Pipeline sin login local.
 - [x] Catálogo sin login local.
-- [ ] Cotizaciones sin login o sesión local duplicada.
-- [ ] Licencias y Cliente 360° sin sesión local duplicada.
-- [ ] Administración, documentos y usuarios usan cliente API compartido.
-- [ ] Respuestas 401 regresan a `/login`.
-- [ ] Opciones y acciones respetan permisos en todos los módulos.
+- [x] Cotizaciones sin login o sesión local duplicada.
+- [x] Licencias y Cliente 360° sin sesión local duplicada.
+- [x] Administración, documentos y usuarios usan cliente API compartido.
+- [x] Respuestas 401 regresan a `/login` conservando la ruta solicitada.
+- [x] Acciones principales respetan permisos de gestión.
 
 ### Funcionalidad
 
-- [ ] Flujo Empresa → Contacto → Oportunidad → Cotización funciona completo.
-- [ ] Flujo Prospecto → Empresa funciona completo.
-- [ ] Flujo Licencia → Renovación → Oportunidad funciona completo.
-- [ ] PDF autenticado y portal público de cotización funcionan.
-- [ ] Documentos se cargan y descargan con autenticación.
-- [ ] Importación Excel registra resultado y auditoría.
+- [ ] Flujo Empresa → Contacto → Oportunidad → Cotización validado mediante smoke test.
+- [ ] Flujo Prospecto → Empresa validado mediante smoke test.
+- [ ] Flujo Licencia → Renovación → Oportunidad validado mediante smoke test.
+- [ ] PDF autenticado y portal público de cotización validados en entorno ejecutable.
+- [ ] Documentos cargados y descargados en entorno ejecutable.
+- [ ] Importación Excel registra resultado y auditoría en entorno ejecutable.
 
 ### Calidad
 
-- [x] Backend compila en Release en el avance actual.
-- [x] Pruebas de dominio pasan en el avance actual.
-- [x] Frontend compila con TypeScript en el avance actual.
+- [x] Backend compila en Release.
+- [x] Pruebas de dominio pasan.
+- [x] Frontend compila con TypeScript.
 - [ ] No hay secretos en el repositorio.
 - [ ] Configuración de producción documentada.
 - [ ] Migraciones aplican sobre una base vacía.
-- [ ] Smoke test manual documentado.
+- [ ] Smoke test manual documentado y ejecutado.
 
 ### Entrega
 
