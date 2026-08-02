@@ -3,6 +3,7 @@ using System.Text;
 using CrmMida.Api.Administration;
 using CrmMida.Api.Auth;
 using CrmMida.Api.Commercial;
+using CrmMida.Api.Configuration;
 using CrmMida.Application;
 using CrmMida.Application.Security;
 using CrmMida.Infrastructure;
@@ -13,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using QuestPDF.Infrastructure;
 
+EnvironmentFileLoader.LoadFromCurrentOrParentDirectories();
 QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
