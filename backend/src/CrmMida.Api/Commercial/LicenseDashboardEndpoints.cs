@@ -16,11 +16,11 @@ public static class LicenseDashboardEndpoints
             await using var command = connection.CreateCommand();
             command.CommandText = """
                 SELECT
-                  COUNT(*) FILTER (WHERE \"ExpiresAtUtc\" < NOW()) AS expired,
-                  COUNT(*) FILTER (WHERE \"ExpiresAtUtc\" >= NOW() AND \"ExpiresAtUtc\" <= NOW() + INTERVAL '30 days') AS d30,
-                  COUNT(*) FILTER (WHERE \"ExpiresAtUtc\" > NOW() + INTERVAL '30 days' AND \"ExpiresAtUtc\" <= NOW() + INTERVAL '60 days') AS d60,
-                  COUNT(*) FILTER (WHERE \"ExpiresAtUtc\" > NOW() + INTERVAL '60 days' AND \"ExpiresAtUtc\" <= NOW() + INTERVAL '90 days') AS d90,
-                  COUNT(*) FILTER (WHERE \"ExpiresAtUtc\" > NOW() + INTERVAL '90 days') AS active,
+                  COUNT(*) FILTER (WHERE "ExpiresAtUtc" < NOW()) AS expired,
+                  COUNT(*) FILTER (WHERE "ExpiresAtUtc" >= NOW() AND "ExpiresAtUtc" <= NOW() + INTERVAL '30 days') AS d30,
+                  COUNT(*) FILTER (WHERE "ExpiresAtUtc" > NOW() + INTERVAL '30 days' AND "ExpiresAtUtc" <= NOW() + INTERVAL '60 days') AS d60,
+                  COUNT(*) FILTER (WHERE "ExpiresAtUtc" > NOW() + INTERVAL '60 days' AND "ExpiresAtUtc" <= NOW() + INTERVAL '90 days') AS d90,
+                  COUNT(*) FILTER (WHERE "ExpiresAtUtc" > NOW() + INTERVAL '90 days') AS active,
                   COUNT(*) AS total
                 FROM licenses;
                 """;
@@ -44,8 +44,8 @@ public static class LicenseDashboardEndpoints
             await connection.OpenAsync(ct);
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                SELECT \"Id\",\"TargetDateUtc\",\"EstimatedAmount\",\"Status\",\"OpportunityId\",\"Notes\",\"CreatedAtUtc\",\"CompletedAtUtc\"
-                FROM renewal_opportunities WHERE \"LicenseId\"=@id ORDER BY \"CreatedAtUtc\" DESC;
+                SELECT "Id","TargetDateUtc","EstimatedAmount","Status","OpportunityId","Notes","CreatedAtUtc","CompletedAtUtc"
+                FROM renewal_opportunities WHERE "LicenseId"=@id ORDER BY "CreatedAtUtc" DESC;
                 """;
             var parameter = command.CreateParameter(); parameter.ParameterName = "@id"; parameter.Value = id; command.Parameters.Add(parameter);
             await using var reader = await command.ExecuteReaderAsync(ct);
@@ -62,11 +62,11 @@ public static class LicenseDashboardEndpoints
             await connection.OpenAsync(ct);
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                SELECT l.\"Id\",c.\"TradeName\",l.\"ProductName\",l.\"SerialNumber\",l.\"ExpiresAtUtc\",
-                       (l.\"ExpiresAtUtc\"::date - CURRENT_DATE) AS days_left
-                FROM licenses l INNER JOIN companies c ON c.\"Id\"=l.\"CompanyId\"
-                WHERE l.\"ExpiresAtUtc\" <= NOW() + (@days || ' days')::interval
-                ORDER BY l.\"ExpiresAtUtc\";
+                SELECT l."Id",c."TradeName",l."ProductName",l."SerialNumber",l."ExpiresAtUtc",
+                       (l."ExpiresAtUtc"::date - CURRENT_DATE) AS days_left
+                FROM licenses l INNER JOIN companies c ON c."Id"=l."CompanyId"
+                WHERE l."ExpiresAtUtc" <= NOW() + (@days || ' days')::interval
+                ORDER BY l."ExpiresAtUtc";
                 """;
             var parameter = command.CreateParameter(); parameter.ParameterName = "@days"; parameter.Value = horizon; command.Parameters.Add(parameter);
             await using var reader = await command.ExecuteReaderAsync(ct);
