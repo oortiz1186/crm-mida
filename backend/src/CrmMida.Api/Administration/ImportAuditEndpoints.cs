@@ -137,8 +137,8 @@ public static class ImportAuditEndpoints
             command.CommandText = """
                 SELECT "Id", "UserId", "UserEmail", "Action", "EntityType", "EntityId", "DetailsJson", "CreatedAtUtc"
                 FROM audit_logs
-                WHERE (@action IS NULL OR "Action" = @action)
-                  AND (@entityType IS NULL OR "EntityType" = @entityType)
+                WHERE (CAST(@action AS text) IS NULL OR "Action" = CAST(@action AS text))
+                  AND (CAST(@entityType AS text) IS NULL OR "EntityType" = CAST(@entityType AS text))
                 ORDER BY "CreatedAtUtc" DESC LIMIT @take;
                 """;
             Add(command, "@action", string.IsNullOrWhiteSpace(action) ? DBNull.Value : action);
