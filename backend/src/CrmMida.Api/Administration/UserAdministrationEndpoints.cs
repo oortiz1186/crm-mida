@@ -20,7 +20,10 @@ public static class UserAdministrationEndpoints
                     x.Id,
                     x.Name,
                     x.Description,
-                    permissions = x.RolePermissions.Select(rp => rp.Permission.Code).OrderBy(code => code)
+                    permissions = x.RolePermissions
+                        .Select(rp => rp.Permission.Code)
+                        .OrderBy(code => code)
+                        .ToList()
                 }).ToListAsync(ct)));
 
         group.MapGet("/users", async (ApplicationDbContext db, CancellationToken ct) =>
@@ -36,7 +39,10 @@ public static class UserAdministrationEndpoints
                     x.LastLoginAtUtc,
                     x.FailedLoginAttempts,
                     x.LockedUntilUtc,
-                    roles = x.UserRoles.Select(ur => new { ur.RoleId, ur.Role.Name }).OrderBy(r => r.Name)
+                    roles = x.UserRoles
+                        .Select(ur => new { ur.RoleId, ur.Role.Name })
+                        .OrderBy(r => r.Name)
+                        .ToList()
                 }).ToListAsync(ct)));
 
         group.MapPost("/users", async (
