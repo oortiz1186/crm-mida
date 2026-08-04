@@ -98,6 +98,7 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
 }).RequireAuthorization();
 
 app.MapCommercialEndpoints();
+app.MapContactRelationEndpoints();
 app.MapProspectEndpoints();
 app.MapOpportunityEndpoints();
 app.MapQuoteEndpoints();
