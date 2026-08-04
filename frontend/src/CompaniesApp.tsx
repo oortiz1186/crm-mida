@@ -170,7 +170,7 @@ export default function CompaniesApp() {
       </Stack></Paper>
       <TableContainer component={Paper}><Table><TableHead><TableRow><TableCell>Empresa</TableCell><TableCell>RFC</TableCell><TableCell>Tipo</TableCell><TableCell>Estado</TableCell><TableCell>Contactos</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead><TableBody>
         {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={28} /></TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={6} align="center">{search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para buscar.' : 'No hay empresas registradas.'}</TableCell></TableRow> : items.map(company => <TableRow hover key={company.id} sx={{ cursor: 'pointer' }} onClick={() => void loadCompany(company.id)}>
-          <TableCell><Typography fontWeight={700}>{company.tradeName}</Typography><Typography variant="caption" color="text.secondary">{company.businessName}</Typography></TableCell>
+          <TableCell><Typography fontWeight={700}>{company.businessName || company.tradeName}</Typography>{company.tradeName && company.tradeName !== company.businessName && <Typography variant="caption" color="text.secondary">{company.tradeName}</Typography>}</TableCell>
           <TableCell>{company.rfc}</TableCell><TableCell>{company.customerType}</TableCell><TableCell><Chip size="small" label={company.status} /></TableCell><TableCell>{company.contactsCount}</TableCell>
           <TableCell align="right"><IconButton aria-label="Abrir empresa" onClick={event => { event.stopPropagation(); void loadCompany(company.id) }}><EditOutlined /></IconButton></TableCell>
         </TableRow>)}
@@ -182,7 +182,7 @@ export default function CompaniesApp() {
       <DialogContent dividers>
         {detailsLoading || !selected ? <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box> : <Stack spacing={3}>
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
-            <Box><Typography variant="h5">{selected.tradeName}</Typography><Typography color="text.secondary">{selected.businessName} · {selected.rfc}</Typography></Box>
+            <Box><Typography variant="h5">{selected.businessName || selected.tradeName}</Typography><Typography color="text.secondary">{[selected.tradeName !== selected.businessName ? selected.tradeName : '', selected.rfc].filter(Boolean).join(' · ')}</Typography></Box>
             {canManage && <Stack direction="row"><Button startIcon={<EditOutlined />} onClick={() => openEditCompany(selected)}>Editar</Button><Button color="error" startIcon={<DeleteOutline />} onClick={() => void deactivateCompany(selected)}>Desactivar</Button></Stack>}
           </Stack>
           <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2}>
