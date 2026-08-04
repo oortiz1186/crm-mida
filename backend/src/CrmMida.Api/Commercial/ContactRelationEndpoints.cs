@@ -13,10 +13,45 @@ public static class ContactRelationEndpoints
             .WithTags("Contact relations");
 
         contacts.MapGet("/search", SearchContactsAsync);
+        contacts.MapGet("/companies/{companyId:guid}/contacts", GetCompanyContactsAsync);
         contacts.MapPost("/companies/{companyId:guid}/contacts/{contactId:guid}", LinkContactAsync);
         contacts.MapDelete("/companies/{companyId:guid}/contacts/{contactId:guid}", UnlinkContactAsync);
 
         return endpoints;
+    }
+
+    private static async Task<IResult> GetCompanyContactsAsync(
+        Guid companyId,
+        ApplicationDbContext db,
+        CancellationToken ct)
+    {
+        var companyExists = await db.Companies.AnyAsync(x => x.Id == companyId && x.IsActive, ct);
+        if (!companyExists) return Results.NotFound();
+
+        var items = await db.Set<CompanyContact>()
+            .AsNoTracking()
+            .Where(x => x.CompanyId == companyId && x.Active && x.Contact.IsActive)
+            .OrderByDescending(x => x.IsPrimary)
+            .ThenBy(x => x.Contact.FirstName)
+            .ThenBy(x => x.Contact.LastName)
+            .Select(x => new CompanyRelatedContact(
+                x.Contact.Id,
+                companyId,
+                x.Contact.FirstName,
+                x.Contact.LastName,
+                x.Contact.Position,
+                x.Contact.Area,
+                x.Contact.Phone,
+                x.Contact.Mobile,
+                x.Contact.Email,
+                x.IsPrimary,
+                x.Contact.IsPurchasingContact,
+                x.Contact.IsTechnicalContact,
+                x.Contact.IsBillingContact,
+                x.Contact.MarketingConsent))
+            .ToListAsync(ct);
+
+        return Results.Ok(items);
     }
 
     private static async Task<IResult> SearchContactsAsync(
@@ -120,3 +155,18 @@ public sealed record ContactSearchItem(
     string? Phone,
     string? Mobile,
     string? Position);
+public sealed record CompanyRelatedContact(
+    Guid Id,
+    Guid CompanyId,
+    string FirstName,
+    string LastName,
+    string? Position,
+    string? Area,
+    string? Phone,
+    string? Mobile,
+    string? Email,
+    bool IsPrimary,
+    bool IsPurchasingContact,
+    bool IsTechnicalContact,
+    bool IsBillingContact,
+    bool MarketingConsent);
