@@ -59,10 +59,25 @@ public static class CommercialPremiumSyncEndpoints
             var take = Math.Clamp(limit ?? 20, 1, 100);
             var companies = await ReadCompaniesAsync(options, take, ct);
             var contacts = await ReadContactsAsync(options, take, ct);
+
+            var items = companies.Select(x => new
+            {
+                id = x.Id,
+                code = x.Code,
+                businessName = x.BusinessName,
+                rfc = x.Rfc,
+                email = JoinEmails(x.Email1, x.Email2, x.Email3),
+                email1 = x.Email1,
+                email2 = x.Email2,
+                email3 = x.Email3,
+                phone = x.ContactPhone,
+                contactName = x.ContactName
+            }).ToList();
+
             return Results.Ok(new
             {
-                totalPreview = companies.Count,
-                items = companies,
+                totalPreview = items.Count,
+                items,
                 contactsPreview = contacts.Count,
                 contacts
             });
@@ -121,7 +136,7 @@ public static class CommercialPremiumSyncEndpoints
                         null,
                         null,
                         FirstEmail(item.Email1),
-                        null,
+                        item.ContactPhone,
                         null,
                         null,
                         null,
@@ -134,6 +149,36 @@ public static class CommercialPremiumSyncEndpoints
 
                     await db.SaveChangesAsync(ct);
                     companyByCustomerId[item.Id] = company;
+
+                    if (!string.IsNullOrWhiteSpace(item.ContactName))
+                    {
+                        var primary = await db.Contacts.SingleOrDefaultAsync(x =>
+                            x.ContpaqiDatabase == options.AllowedDatabase &&
+                            x.ContpaqiCustomerId == item.Id &&
+                            x.ContpaqiAddressId == null, ct);
+
+                        if (primary is null)
+                        {
+                            var parts = SplitName(item.ContactName);
+                            primary = new Contact(company.Id, parts.FirstName, parts.LastName, FirstEmail(item.Email1));
+                            db.Contacts.Add(primary);
+                            contactsCreated++;
+                        }
+                        else contactsUpdated++;
+
+                        primary.UpdateFromContpaqi(
+                            item.ContactName,
+                            item.Email1,
+                            item.Email2,
+                            item.Email3,
+                            item.ContactPhone,
+                            item.Id,
+                            null,
+                            options.AllowedDatabase);
+
+                        await db.SaveChangesAsync(ct);
+                        relationsCreated += await EnsureRelationAsync(db, company.Id, primary.Id, true, ct);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -225,6 +270,15 @@ public static class CommercialPremiumSyncEndpoints
         var relations = db.Set<CompanyContact>();
         var relation = await relations.SingleOrDefaultAsync(x => x.CompanyId == companyId && x.ContactId == contactId, ct);
 
+        if (isPrimary)
+        {
+            var currentPrimaries = await relations
+                .Where(x => x.CompanyId == companyId && x.IsPrimary && x.ContactId != contactId)
+                .ToListAsync(ct);
+            foreach (var current in currentPrimaries)
+                current.Update(false, current.Active);
+        }
+
         if (relation is null)
         {
             relations.Add(new CompanyContact(companyId, contactId, isPrimary));
@@ -270,7 +324,9 @@ public static class CommercialPremiumSyncEndpoints
                 LTRIM(RTRIM(ISNULL(CRFC, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL1, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL2, ''))),
-                LTRIM(RTRIM(ISNULL(CEMAIL3, '')))
+                LTRIM(RTRIM(ISNULL(CEMAIL3, ''))),
+                LTRIM(RTRIM(ISNULL(CCON1NOM, ''))),
+                LTRIM(RTRIM(ISNULL(CCON1TEL, '')))
             FROM admClientes
             WHERE CTIPOCLIENTE IN (1, 3) AND CESTATUS = 1
             ORDER BY CRAZONSOCIAL;
@@ -285,7 +341,9 @@ public static class CommercialPremiumSyncEndpoints
                 reader.GetString(3),
                 EmptyToNull(reader.GetString(4)),
                 EmptyToNull(reader.GetString(5)),
-                EmptyToNull(reader.GetString(6))));
+                EmptyToNull(reader.GetString(6)),
+                EmptyToNull(reader.GetString(7)),
+                EmptyToNull(reader.GetString(8))));
         return rows;
     }
 
@@ -301,7 +359,7 @@ public static class CommercialPremiumSyncEndpoints
             SELECT {(limit.HasValue ? $"TOP ({limit.Value})" : string.Empty)}
                 CIDDIRECCION,
                 CIDCATALOGO,
-                LTRIM(RTRIM(ISNULL(CNOMBRECALLE, ''))),
+                LTRIM(RTRIM(ISNULL(CSUCURSAL, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL, ''))),
                 LTRIM(RTRIM(ISNULL(CTELEFONO1, ''))),
                 LTRIM(RTRIM(ISNULL(CTELEFONO2, '')))
@@ -334,6 +392,18 @@ public static class CommercialPremiumSyncEndpoints
             : value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .FirstOrDefault()?.ToLowerInvariant();
 
+    private static string? JoinEmails(params string?[] values)
+    {
+        var emails = values
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .SelectMany(x => x!.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return emails.Length == 0 ? null : string.Join("; ", emails);
+    }
+
     private static string NormalizeRfc(string value) => value.Replace(" ", string.Empty).Trim().ToUpperInvariant();
     private static string? EmptyToNull(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -345,7 +415,9 @@ public static class CommercialPremiumSyncEndpoints
         string Rfc,
         string? Email1,
         string? Email2,
-        string? Email3);
+        string? Email3,
+        string? ContactName,
+        string? ContactPhone);
     private sealed record CommercialContactRow(
         int AddressId,
         int CustomerId,
