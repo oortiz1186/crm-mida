@@ -110,6 +110,7 @@ app.MapLicenseAlertEndpoints();
 app.MapCustomer360Endpoints();
 app.MapAgendaDashboardEndpoints();
 app.MapImportAuditEndpoints();
+app.MapCommercialPremiumSyncEndpoints();
 app.MapDocumentsReportsEndpoints();
 app.MapUserAdministrationEndpoints();
 app.MapGlobalSearchEndpoints();
