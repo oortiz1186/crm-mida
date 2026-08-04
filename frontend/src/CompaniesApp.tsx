@@ -51,8 +51,10 @@ export default function CompaniesApp() {
   const canManage = hasPermission('companies.manage')
   const [items, setItems] = useState<CompanyListItem[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [companyOpen, setCompanyOpen] = useState(false)
@@ -72,24 +74,22 @@ export default function CompaniesApp() {
   }
 
   async function loadCompany(id: string) {
+    setDetailsOpen(true); setDetailsLoading(true); setError('')
     try { setSelected(await apiJson<Company>(`/api/v1/companies/${id}`)) }
-    catch (value) { setError(value instanceof Error ? value.message : 'No fue posible abrir la empresa.') }
+    catch (value) {
+      setDetailsOpen(false)
+      setError(value instanceof Error ? value.message : 'No fue posible abrir la empresa.')
+    } finally { setDetailsLoading(false) }
   }
+
+  function closeDetails() { setDetailsOpen(false); setSelected(null) }
 
   useEffect(() => {
     const term = search.trim()
-
     if (term.length > 0 && term.length < 3) {
-      setItems([])
-      setSelected(null)
-      setLoading(false)
-      return
+      setItems([]); setLoading(false); return
     }
-
-    const timeoutId = window.setTimeout(() => {
-      void loadCompanies(term)
-    }, 350)
-
+    const timeoutId = window.setTimeout(() => { void loadCompanies(term) }, 350)
     return () => window.clearTimeout(timeoutId)
   }, [search])
 
@@ -111,18 +111,17 @@ export default function CompaniesApp() {
     event.preventDefault(); setSaving(true); setError('')
     try {
       const company = await apiJson<Company>(editingCompany ? `/api/v1/companies/${editingCompany.id}` : '/api/v1/companies', {
-        method: editingCompany ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: editingCompany ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...companyForm, assignedUserId: null }),
       })
-      setCompanyOpen(false); setSelected(company); await loadCompanies()
+      setCompanyOpen(false); setSelected(company); setDetailsOpen(true); await loadCompanies()
     } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible guardar la empresa.') }
     finally { setSaving(false) }
   }
 
   async function deactivateCompany(company: Company) {
     if (!window.confirm(`¿Desactivar ${company.tradeName}?`)) return
-    try { await apiFetch(`/api/v1/companies/${company.id}`, { method: 'DELETE' }); setSelected(null); await loadCompanies() }
+    try { await apiFetch(`/api/v1/companies/${company.id}`, { method: 'DELETE' }); closeDetails(); await loadCompanies() }
     catch (value) { setError(value instanceof Error ? value.message : 'No fue posible desactivar la empresa.') }
   }
 
@@ -166,31 +165,35 @@ export default function CompaniesApp() {
       </Stack>
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
       <Paper sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Escribe al menos 3 caracteres para buscar"
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          helperText={search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para mostrar resultados.' : ' '}
-        />
+        <TextField fullWidth size="small" placeholder="Escribe al menos 3 caracteres para buscar" value={search} onChange={event => setSearch(event.target.value)} helperText={search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para mostrar resultados.' : ' '} />
         <IconButton aria-label="Limpiar búsqueda" onClick={() => setSearch('')}><Refresh /></IconButton>
       </Stack></Paper>
       <TableContainer component={Paper}><Table><TableHead><TableRow><TableCell>Empresa</TableCell><TableCell>RFC</TableCell><TableCell>Tipo</TableCell><TableCell>Estado</TableCell><TableCell>Contactos</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead><TableBody>
         {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={28} /></TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={6} align="center">{search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para buscar.' : 'No hay empresas registradas.'}</TableCell></TableRow> : items.map(company => <TableRow hover key={company.id} sx={{ cursor: 'pointer' }} onClick={() => void loadCompany(company.id)}>
           <TableCell><Typography fontWeight={700}>{company.tradeName}</Typography><Typography variant="caption" color="text.secondary">{company.businessName}</Typography></TableCell>
           <TableCell>{company.rfc}</TableCell><TableCell>{company.customerType}</TableCell><TableCell><Chip size="small" label={company.status} /></TableCell><TableCell>{company.contactsCount}</TableCell>
-          <TableCell align="right">{canManage && <IconButton onClick={event => { event.stopPropagation(); void loadCompany(company.id).then(() => undefined) }}><EditOutlined /></IconButton>}</TableCell>
+          <TableCell align="right"><IconButton aria-label="Abrir empresa" onClick={event => { event.stopPropagation(); void loadCompany(company.id) }}><EditOutlined /></IconButton></TableCell>
         </TableRow>)}
       </TableBody></Table></TableContainer>
-
-      {selected && <Paper sx={{ p: 3 }}><Stack spacing={2}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="h5">{selected.tradeName}</Typography><Typography color="text.secondary">{selected.businessName} · {selected.rfc}</Typography></Box>{canManage && <Stack direction="row"><Button startIcon={<EditOutlined />} onClick={() => openEditCompany(selected)}>Editar</Button><Button color="error" startIcon={<DeleteOutline />} onClick={() => void deactivateCompany(selected)}>Desactivar</Button></Stack>}</Stack>
-        <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2}><Typography><b>Correo:</b> {selected.email || '—'}</Typography><Typography><b>Teléfono:</b> {selected.phone || '—'}</Typography><Typography><b>Ubicación:</b> {[selected.city, selected.state].filter(Boolean).join(', ') || '—'}</Typography></Box>
-        <Stack direction="row" justifyContent="space-between"><Typography variant="h6">Contactos</Typography>{canManage && <Button size="small" startIcon={<Add />} onClick={openNewContact}>Nuevo contacto</Button>}</Stack>
-        {selected.contacts.length === 0 ? <Typography color="text.secondary">Sin contactos activos.</Typography> : selected.contacts.map(contact => <Paper variant="outlined" key={contact.id} sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"><Box><Typography fontWeight={700}>{contact.firstName} {contact.lastName} {contact.isPrimary && <Chip size="small" label="Principal" />}</Typography><Typography variant="body2" color="text.secondary">{contact.position || 'Sin puesto'} · {contact.email || contact.mobile || contact.phone || 'Sin datos de contacto'}</Typography></Box>{canManage && <Stack direction="row"><IconButton onClick={() => openEditContact(contact)}><EditOutlined /></IconButton><IconButton color="error" onClick={() => void deactivateContact(contact)}><DeleteOutline /></IconButton></Stack>}</Stack></Paper>)}
-      </Stack></Paper>}
     </Stack>
+
+    <Dialog open={detailsOpen} onClose={closeDetails} fullWidth maxWidth="md">
+      <DialogTitle>Detalle de empresa</DialogTitle>
+      <DialogContent dividers>
+        {detailsLoading || !selected ? <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box> : <Stack spacing={3}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}>
+            <Box><Typography variant="h5">{selected.tradeName}</Typography><Typography color="text.secondary">{selected.businessName} · {selected.rfc}</Typography></Box>
+            {canManage && <Stack direction="row"><Button startIcon={<EditOutlined />} onClick={() => openEditCompany(selected)}>Editar</Button><Button color="error" startIcon={<DeleteOutline />} onClick={() => void deactivateCompany(selected)}>Desactivar</Button></Stack>}
+          </Stack>
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2}>
+            <Typography><b>Correo:</b> {selected.email || '—'}</Typography><Typography><b>Teléfono:</b> {selected.phone || '—'}</Typography><Typography><b>Ubicación:</b> {[selected.city, selected.state].filter(Boolean).join(', ') || '—'}</Typography>
+          </Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6">Contactos</Typography>{canManage && <Button size="small" startIcon={<Add />} onClick={openNewContact}>Nuevo contacto</Button>}</Stack>
+          {selected.contacts.length === 0 ? <Typography color="text.secondary">Sin contactos activos.</Typography> : selected.contacts.map(contact => <Paper variant="outlined" key={contact.id} sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"><Box><Typography fontWeight={700}>{contact.firstName} {contact.lastName} {contact.isPrimary && <Chip size="small" label="Principal" sx={{ ml: 1 }} />}</Typography><Typography variant="body2" color="text.secondary">{contact.position || 'Sin puesto'} · {contact.email || contact.mobile || contact.phone || 'Sin datos de contacto'}</Typography></Box>{canManage && <Stack direction="row"><IconButton onClick={() => openEditContact(contact)}><EditOutlined /></IconButton><IconButton color="error" onClick={() => void deactivateContact(contact)}><DeleteOutline /></IconButton></Stack>}</Stack></Paper>)}
+        </Stack>}
+      </DialogContent>
+      <DialogActions><Button onClick={closeDetails}>Cerrar</Button></DialogActions>
+    </Dialog>
 
     <Dialog open={companyOpen} onClose={() => setCompanyOpen(false)} fullWidth maxWidth="md"><DialogTitle>{editingCompany ? 'Editar empresa' : 'Nueva empresa'}</DialogTitle><Box component="form" onSubmit={saveCompany}><DialogContent><Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2,1fr)' }} gap={2}>
       <TextField required label="Nombre comercial" value={companyForm.tradeName} onChange={e => setCompanyForm({ ...companyForm, tradeName: e.target.value })} /><TextField required label="Razón social" value={companyForm.businessName} onChange={e => setCompanyForm({ ...companyForm, businessName: e.target.value })} /><TextField required label="RFC" value={companyForm.rfc} onChange={e => setCompanyForm({ ...companyForm, rfc: e.target.value })} /><TextField select label="Tipo" value={companyForm.customerType} onChange={e => setCompanyForm({ ...companyForm, customerType: e.target.value })}><MenuItem value="client">Cliente</MenuItem><MenuItem value="prospect">Prospecto</MenuItem><MenuItem value="supplier">Proveedor</MenuItem></TextField><TextField label="Correo" value={companyForm.email} onChange={e => setCompanyForm({ ...companyForm, email: e.target.value })} /><TextField label="Teléfono" value={companyForm.phone} onChange={e => setCompanyForm({ ...companyForm, phone: e.target.value })} /><TextField label="Ciudad" value={companyForm.city} onChange={e => setCompanyForm({ ...companyForm, city: e.target.value })} /><TextField label="Estado" value={companyForm.state} onChange={e => setCompanyForm({ ...companyForm, state: e.target.value })} /><TextField label="Código postal fiscal" value={companyForm.fiscalPostalCode} onChange={e => setCompanyForm({ ...companyForm, fiscalPostalCode: e.target.value })} /><TextField label="Régimen fiscal" value={companyForm.taxRegime} onChange={e => setCompanyForm({ ...companyForm, taxRegime: e.target.value })} /><TextField label="Etiquetas" value={companyForm.tags} onChange={e => setCompanyForm({ ...companyForm, tags: e.target.value })} /><TextField select label="Estado" value={companyForm.status} onChange={e => setCompanyForm({ ...companyForm, status: e.target.value })}><MenuItem value="active">Activo</MenuItem><MenuItem value="inactive">Inactivo</MenuItem></TextField>
