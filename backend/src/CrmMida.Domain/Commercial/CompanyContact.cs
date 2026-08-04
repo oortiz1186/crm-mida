@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using CrmMida.Domain.Common;
 
 namespace CrmMida.Domain.Commercial;
 
+[Table("company_contacts")]
 public sealed class CompanyContact : BaseEntity
 {
     private CompanyContact() { }
