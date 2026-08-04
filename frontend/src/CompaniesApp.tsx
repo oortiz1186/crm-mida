@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
-  Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions,
+  Alert, Autocomplete, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions,
   DialogContent, DialogTitle, IconButton, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TextField, Typography,
 } from '@mui/material'
-import { Add, DeleteOutline, EditOutlined, Refresh } from '@mui/icons-material'
+import { Add, DeleteOutline, EditOutlined, PersonAddAlt1, Refresh } from '@mui/icons-material'
 import { apiFetch, apiJson } from './api/apiClient'
 import { useAuth } from './auth/AuthProvider'
 
@@ -18,6 +18,10 @@ type Contact = {
   area?: string; phone?: string; mobile?: string; email?: string; isPrimary: boolean;
   isPurchasingContact: boolean; isTechnicalContact: boolean; isBillingContact: boolean;
   marketingConsent: boolean
+}
+type ContactSearchItem = {
+  id: string; firstName: string; lastName: string; email?: string; phone?: string;
+  mobile?: string; position?: string
 }
 type Company = CompanyListItem & {
   taxRegime?: string; fiscalPostalCode?: string; website?: string; address?: string;
@@ -59,10 +63,16 @@ export default function CompaniesApp() {
   const [error, setError] = useState('')
   const [companyOpen, setCompanyOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [companyForm, setCompanyForm] = useState<CompanyForm>(emptyCompany)
   const [contactForm, setContactForm] = useState<ContactForm>(emptyContact)
+  const [contactSearch, setContactSearch] = useState('')
+  const [contactOptions, setContactOptions] = useState<ContactSearchItem[]>([])
+  const [contactSearchLoading, setContactSearchLoading] = useState(false)
+  const [existingContact, setExistingContact] = useState<ContactSearchItem | null>(null)
+  const [linkPrimary, setLinkPrimary] = useState(false)
 
   async function loadCompanies(term = search) {
     setLoading(true); setError('')
@@ -75,8 +85,17 @@ export default function CompaniesApp() {
 
   async function loadCompany(id: string) {
     setDetailsOpen(true); setDetailsLoading(true); setError('')
-    try { setSelected(await apiJson<Company>(`/api/v1/companies/${id}`)) }
-    catch (value) {
+    try {
+      const [company, related] = await Promise.all([
+        apiJson<Company>(`/api/v1/companies/${id}`),
+        apiJson<Contact[]>(`/api/v1/contact-relations/companies/${id}/contacts`),
+      ])
+      const contacts = [...related]
+      for (const contact of company.contacts) {
+        if (!contacts.some(x => x.id === contact.id)) contacts.push(contact)
+      }
+      setSelected({ ...company, contacts })
+    } catch (value) {
       setDetailsOpen(false)
       setError(value instanceof Error ? value.message : 'No fue posible abrir la empresa.')
     } finally { setDetailsLoading(false) }
@@ -92,6 +111,24 @@ export default function CompaniesApp() {
     const timeoutId = window.setTimeout(() => { void loadCompanies(term) }, 350)
     return () => window.clearTimeout(timeoutId)
   }, [search])
+
+  useEffect(() => {
+    const term = contactSearch.trim()
+    if (!linkOpen || !selected || term.length < 3) {
+      setContactOptions([])
+      setContactSearchLoading(false)
+      return
+    }
+    const timeoutId = window.setTimeout(async () => {
+      setContactSearchLoading(true)
+      try {
+        setContactOptions(await apiJson<ContactSearchItem[]>(`/api/v1/contact-relations/search?search=${encodeURIComponent(term)}&excludeCompanyId=${selected.id}`))
+      } catch (value) {
+        setError(value instanceof Error ? value.message : 'No fue posible buscar contactos.')
+      } finally { setContactSearchLoading(false) }
+    }, 350)
+    return () => window.clearTimeout(timeoutId)
+  }, [contactSearch, linkOpen, selected?.id])
 
   function openNewCompany() { setEditingCompany(null); setCompanyForm(emptyCompany); setCompanyOpen(true) }
   function openEditCompany(company: Company) {
@@ -114,13 +151,13 @@ export default function CompaniesApp() {
         method: editingCompany ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...companyForm, assignedUserId: null }),
       })
-      setCompanyOpen(false); setSelected(company); setDetailsOpen(true); await loadCompanies()
+      setCompanyOpen(false); await loadCompany(company.id); await loadCompanies()
     } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible guardar la empresa.') }
     finally { setSaving(false) }
   }
 
   async function deactivateCompany(company: Company) {
-    if (!window.confirm(`¿Desactivar ${company.tradeName}?`)) return
+    if (!window.confirm(`¿Desactivar ${company.businessName || company.tradeName}?`)) return
     try { await apiFetch(`/api/v1/companies/${company.id}`, { method: 'DELETE' }); closeDetails(); await loadCompanies() }
     catch (value) { setError(value instanceof Error ? value.message : 'No fue posible desactivar la empresa.') }
   }
@@ -138,23 +175,46 @@ export default function CompaniesApp() {
     setContactOpen(true)
   }
 
+  function openLinkContact() {
+    setContactSearch(''); setContactOptions([]); setExistingContact(null); setLinkPrimary(false); setLinkOpen(true)
+  }
+
   async function saveContact(event: FormEvent) {
     event.preventDefault(); if (!selected) return
     setSaving(true); setError('')
     try {
-      await apiJson<Contact>(editingContact ? `/api/v1/contacts/${editingContact.id}` : `/api/v1/companies/${selected.id}/contacts`, {
+      const contact = await apiJson<Contact>(editingContact ? `/api/v1/contacts/${editingContact.id}` : `/api/v1/companies/${selected.id}/contacts`, {
         method: editingContact ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contactForm),
       })
+      if (!editingContact) {
+        await apiFetch(`/api/v1/contact-relations/companies/${selected.id}/contacts/${contact.id}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isPrimary: contactForm.isPrimary }),
+        })
+      }
       setContactOpen(false); await loadCompany(selected.id); await loadCompanies()
     } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible guardar el contacto.') }
     finally { setSaving(false) }
   }
 
-  async function deactivateContact(contact: Contact) {
-    if (!selected || !window.confirm(`¿Desactivar a ${contact.firstName} ${contact.lastName}?`)) return
-    try { await apiFetch(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' }); await loadCompany(selected.id); await loadCompanies() }
-    catch (value) { setError(value instanceof Error ? value.message : 'No fue posible desactivar el contacto.') }
+  async function linkExistingContact() {
+    if (!selected || !existingContact) return
+    setSaving(true); setError('')
+    try {
+      await apiFetch(`/api/v1/contact-relations/companies/${selected.id}/contacts/${existingContact.id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isPrimary: linkPrimary }),
+      })
+      setLinkOpen(false); await loadCompany(selected.id); await loadCompanies()
+    } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible relacionar el contacto.') }
+    finally { setSaving(false) }
+  }
+
+  async function unlinkContact(contact: Contact) {
+    if (!selected || !window.confirm(`¿Quitar a ${contact.firstName} ${contact.lastName} de esta empresa? El contacto seguirá registrado.`)) return
+    try {
+      await apiFetch(`/api/v1/contact-relations/companies/${selected.id}/contacts/${contact.id}`, { method: 'DELETE' })
+      await loadCompany(selected.id); await loadCompanies()
+    } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible quitar la relación del contacto.') }
   }
 
   return <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -188,8 +248,11 @@ export default function CompaniesApp() {
           <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2}>
             <Typography><b>Correo:</b> {selected.email || '—'}</Typography><Typography><b>Teléfono:</b> {selected.phone || '—'}</Typography><Typography><b>Ubicación:</b> {[selected.city, selected.state].filter(Boolean).join(', ') || '—'}</Typography>
           </Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6">Contactos</Typography>{canManage && <Button size="small" startIcon={<Add />} onClick={openNewContact}>Nuevo contacto</Button>}</Stack>
-          {selected.contacts.length === 0 ? <Typography color="text.secondary">Sin contactos activos.</Typography> : selected.contacts.map(contact => <Paper variant="outlined" key={contact.id} sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"><Box><Typography fontWeight={700}>{contact.firstName} {contact.lastName} {contact.isPrimary && <Chip size="small" label="Principal" sx={{ ml: 1 }} />}</Typography><Typography variant="body2" color="text.secondary">{contact.position || 'Sin puesto'} · {contact.email || contact.mobile || contact.phone || 'Sin datos de contacto'}</Typography></Box>{canManage && <Stack direction="row"><IconButton onClick={() => openEditContact(contact)}><EditOutlined /></IconButton><IconButton color="error" onClick={() => void deactivateContact(contact)}><DeleteOutline /></IconButton></Stack>}</Stack></Paper>)}
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}>
+            <Typography variant="h6">Contactos</Typography>
+            {canManage && <Stack direction="row" spacing={1}><Button size="small" startIcon={<Add />} onClick={openNewContact}>Nuevo contacto</Button><Button size="small" variant="outlined" startIcon={<PersonAddAlt1 />} onClick={openLinkContact}>Relacionar existente</Button></Stack>}
+          </Stack>
+          {selected.contacts.length === 0 ? <Typography color="text.secondary">Sin contactos relacionados.</Typography> : selected.contacts.map(contact => <Paper variant="outlined" key={contact.id} sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"><Box><Typography fontWeight={700}>{contact.firstName} {contact.lastName} {contact.isPrimary && <Chip size="small" label="Principal" sx={{ ml: 1 }} />}</Typography><Typography variant="body2" color="text.secondary">{contact.position || 'Sin puesto'} · {contact.email || contact.mobile || contact.phone || 'Sin datos de contacto'}</Typography></Box>{canManage && <Stack direction="row"><IconButton aria-label="Editar contacto" onClick={() => openEditContact(contact)}><EditOutlined /></IconButton><IconButton aria-label="Quitar relación" color="error" onClick={() => void unlinkContact(contact)}><DeleteOutline /></IconButton></Stack>}</Stack></Paper>)}
         </Stack>}
       </DialogContent>
       <DialogActions><Button onClick={closeDetails}>Cerrar</Button></DialogActions>
@@ -200,5 +263,27 @@ export default function CompaniesApp() {
     </Box></DialogContent><DialogActions><Button onClick={() => setCompanyOpen(false)}>Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</Button></DialogActions></Box></Dialog>
 
     <Dialog open={contactOpen} onClose={() => setContactOpen(false)} fullWidth maxWidth="sm"><DialogTitle>{editingContact ? 'Editar contacto' : 'Nuevo contacto'}</DialogTitle><Box component="form" onSubmit={saveContact}><DialogContent><Stack spacing={2}><TextField required label="Nombre" value={contactForm.firstName} onChange={e => setContactForm({ ...contactForm, firstName: e.target.value })} /><TextField required label="Apellidos" value={contactForm.lastName} onChange={e => setContactForm({ ...contactForm, lastName: e.target.value })} /><TextField label="Puesto" value={contactForm.position} onChange={e => setContactForm({ ...contactForm, position: e.target.value })} /><TextField label="Correo" value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} /><TextField label="Móvil" value={contactForm.mobile} onChange={e => setContactForm({ ...contactForm, mobile: e.target.value })} /><TextField label="Teléfono" value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} /><TextField select label="Contacto principal" value={contactForm.isPrimary ? 'yes' : 'no'} onChange={e => setContactForm({ ...contactForm, isPrimary: e.target.value === 'yes' })}><MenuItem value="no">No</MenuItem><MenuItem value="yes">Sí</MenuItem></TextField></Stack></DialogContent><DialogActions><Button onClick={() => setContactOpen(false)}>Cancelar</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</Button></DialogActions></Box></Dialog>
+
+    <Dialog open={linkOpen} onClose={() => setLinkOpen(false)} fullWidth maxWidth="sm">
+      <DialogTitle>Relacionar contacto existente</DialogTitle>
+      <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
+        <Autocomplete
+          options={contactOptions}
+          value={existingContact}
+          loading={contactSearchLoading}
+          filterOptions={options => options}
+          getOptionLabel={option => `${option.firstName} ${option.lastName}`.trim()}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          onChange={(_, value) => setExistingContact(value)}
+          inputValue={contactSearch}
+          onInputChange={(_, value, reason) => { if (reason !== 'reset') setContactSearch(value) }}
+          noOptionsText={contactSearch.trim().length < 3 ? 'Escribe al menos 3 caracteres' : 'No se encontraron contactos'}
+          renderOption={(props, option) => <Box component="li" {...props} key={option.id}><Box><Typography fontWeight={700}>{option.firstName} {option.lastName}</Typography><Typography variant="body2" color="text.secondary">{option.email || option.mobile || option.phone || 'Sin datos de contacto'}{option.position ? ` · ${option.position}` : ''}</Typography></Box></Box>}
+          renderInput={params => <TextField {...params} label="Buscar por nombre, correo o teléfono" helperText="La búsqueda inicia con 3 caracteres" InputProps={{ ...params.InputProps, endAdornment: <>{contactSearchLoading ? <CircularProgress size={20} /> : null}{params.InputProps.endAdornment}</> }} />}
+        />
+        <TextField select label="Relación en esta empresa" value={linkPrimary ? 'primary' : 'normal'} onChange={e => setLinkPrimary(e.target.value === 'primary')}><MenuItem value="normal">Contacto relacionado</MenuItem><MenuItem value="primary">Contacto principal</MenuItem></TextField>
+      </Stack></DialogContent>
+      <DialogActions><Button onClick={() => setLinkOpen(false)}>Cancelar</Button><Button variant="contained" disabled={!existingContact || saving} onClick={() => void linkExistingContact()}>{saving ? 'Relacionando…' : 'Relacionar contacto'}</Button></DialogActions>
+    </Dialog>
   </Container>
 }
