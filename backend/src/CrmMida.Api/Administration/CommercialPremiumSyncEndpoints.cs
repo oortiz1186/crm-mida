@@ -45,7 +45,7 @@ public static class CommercialPremiumSyncEndpoints
                 connected = true,
                 database = reader.GetString(0),
                 companies = reader.GetInt32(1),
-                additionalContacts = reader.GetInt32(2),
+                contacts = reader.GetInt32(2),
                 readOnly = true
             });
         });
@@ -58,13 +58,13 @@ public static class CommercialPremiumSyncEndpoints
 
             var take = Math.Clamp(limit ?? 20, 1, 100);
             var companies = await ReadCompaniesAsync(options, take, ct);
-            var additionalContacts = await ReadAdditionalContactsAsync(options, take, ct);
+            var contacts = await ReadContactsAsync(options, take, ct);
             return Results.Ok(new
             {
                 totalPreview = companies.Count,
                 items = companies,
-                additionalContactsPreview = additionalContacts.Count,
-                additionalContacts
+                contactsPreview = contacts.Count,
+                contacts
             });
         });
 
@@ -80,7 +80,7 @@ public static class CommercialPremiumSyncEndpoints
             if (validation is not null) return Results.BadRequest(new { message = validation });
 
             var sourceCompanies = await ReadCompaniesAsync(options, null, ct);
-            var sourceAdditionalContacts = await ReadAdditionalContactsAsync(options, null, ct);
+            var sourceContacts = await ReadContactsAsync(options, null, ct);
             var companyByCustomerId = new Dictionary<int, Company>();
             var created = 0;
             var updated = 0;
@@ -105,7 +105,7 @@ public static class CommercialPremiumSyncEndpoints
                     var company = await db.Companies.SingleOrDefaultAsync(x => x.ExternalContpaqiId == externalId, ct)
                         ?? await db.Companies.SingleOrDefaultAsync(x => x.Rfc == rfc, ct);
 
-                    var tradeName = string.IsNullOrWhiteSpace(item.TradeName) ? item.BusinessName : item.TradeName;
+                    var tradeName = string.IsNullOrWhiteSpace(item.Code) ? item.BusinessName : item.Code;
                     if (company is null)
                     {
                         company = new Company(tradeName, item.BusinessName, rfc, "client");
@@ -115,34 +115,25 @@ public static class CommercialPremiumSyncEndpoints
                     else updated++;
 
                     company.Update(
-                        tradeName, item.BusinessName, rfc, null, item.PostalCode,
-                        FirstEmail(item.Email1), item.Phone, null, item.Address, item.City, item.State,
-                        "client", "active", "CONTPAQi", externalId, company.AssignedUserId);
+                        tradeName,
+                        item.BusinessName,
+                        rfc,
+                        null,
+                        null,
+                        FirstEmail(item.Email1),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "client",
+                        "active",
+                        "CONTPAQi",
+                        externalId,
+                        company.AssignedUserId);
 
                     await db.SaveChangesAsync(ct);
                     companyByCustomerId[item.Id] = company;
-
-                    if (!string.IsNullOrWhiteSpace(item.ContactName))
-                    {
-                        var primary = await db.Contacts.SingleOrDefaultAsync(x =>
-                            x.ContpaqiDatabase == options.AllowedDatabase &&
-                            x.ContpaqiCustomerId == item.Id &&
-                            x.ContpaqiAddressId == null, ct);
-
-                        if (primary is null)
-                        {
-                            var parts = SplitName(item.ContactName);
-                            primary = new Contact(company.Id, parts.FirstName, parts.LastName, FirstEmail(item.Email1));
-                            db.Contacts.Add(primary);
-                            contactsCreated++;
-                        }
-                        else contactsUpdated++;
-
-                        primary.UpdateFromContpaqi(item.ContactName, item.Email1, item.Email2, item.Email3,
-                            item.Phone, item.Id, null, options.AllowedDatabase);
-                        await db.SaveChangesAsync(ct);
-                        relationsCreated += await EnsureRelationAsync(db, company.Id, primary.Id, true, ct);
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -150,7 +141,7 @@ public static class CommercialPremiumSyncEndpoints
                 }
             }
 
-            foreach (var item in sourceAdditionalContacts)
+            foreach (var item in sourceContacts)
             {
                 try
                 {
@@ -180,8 +171,16 @@ public static class CommercialPremiumSyncEndpoints
                     }
                     else contactsUpdated++;
 
-                    contact.UpdateFromContpaqi(name, item.Email, null, null, phone,
-                        item.CustomerId, item.AddressId, options.AllowedDatabase);
+                    contact.UpdateFromContpaqi(
+                        name,
+                        item.Email,
+                        null,
+                        null,
+                        phone,
+                        item.CustomerId,
+                        item.AddressId,
+                        options.AllowedDatabase);
+
                     await db.SaveChangesAsync(ct);
                     relationsCreated += await EnsureRelationAsync(db, company.Id, contact.Id, false, ct);
                 }
@@ -195,7 +194,7 @@ public static class CommercialPremiumSyncEndpoints
                 new
                 {
                     companiesRead = sourceCompanies.Count,
-                    additionalContactsRead = sourceAdditionalContacts.Count,
+                    contactsRead = sourceContacts.Count,
                     created,
                     updated,
                     skipped,
@@ -208,7 +207,7 @@ public static class CommercialPremiumSyncEndpoints
             return Results.Ok(new
             {
                 companiesRead = sourceCompanies.Count,
-                additionalContactsRead = sourceAdditionalContacts.Count,
+                contactsRead = sourceContacts.Count,
                 created,
                 updated,
                 skipped,
@@ -225,11 +224,6 @@ public static class CommercialPremiumSyncEndpoints
     {
         var relations = db.Set<CompanyContact>();
         var relation = await relations.SingleOrDefaultAsync(x => x.CompanyId == companyId && x.ContactId == contactId, ct);
-        if (isPrimary)
-        {
-            var previous = await relations.Where(x => x.CompanyId == companyId && x.IsPrimary && x.ContactId != contactId).ToListAsync(ct);
-            foreach (var current in previous) current.Update(false, current.Active);
-        }
 
         if (relation is null)
         {
@@ -276,13 +270,7 @@ public static class CommercialPremiumSyncEndpoints
                 LTRIM(RTRIM(ISNULL(CRFC, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL1, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL2, ''))),
-                LTRIM(RTRIM(ISNULL(CEMAIL3, ''))),
-                LTRIM(RTRIM(ISNULL(CTELEFONO1, ''))),
-                LTRIM(RTRIM(ISNULL(CDOMICILIO, ''))),
-                LTRIM(RTRIM(ISNULL(CCIUDAD, ''))),
-                LTRIM(RTRIM(ISNULL(CESTADO, ''))),
-                LTRIM(RTRIM(ISNULL(CCODIGOPOSTAL, ''))),
-                LTRIM(RTRIM(ISNULL(CCONTACTO, '')))
+                LTRIM(RTRIM(ISNULL(CEMAIL3, '')))
             FROM admClientes
             WHERE CTIPOCLIENTE IN (1, 3) AND CESTATUS = 1
             ORDER BY CRAZONSOCIAL;
@@ -291,24 +279,28 @@ public static class CommercialPremiumSyncEndpoints
         await using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
             rows.Add(new CommercialCompanyRow(
-                reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
-                EmptyToNull(reader.GetString(4)), EmptyToNull(reader.GetString(5)), EmptyToNull(reader.GetString(6)),
-                EmptyToNull(reader.GetString(7)), EmptyToNull(reader.GetString(8)), EmptyToNull(reader.GetString(9)),
-                EmptyToNull(reader.GetString(10)), EmptyToNull(reader.GetString(11)), EmptyToNull(reader.GetString(12))));
+                reader.GetInt32(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3),
+                EmptyToNull(reader.GetString(4)),
+                EmptyToNull(reader.GetString(5)),
+                EmptyToNull(reader.GetString(6))));
         return rows;
     }
 
-    private static async Task<List<AdditionalContactRow>> ReadAdditionalContactsAsync(
+    private static async Task<List<CommercialContactRow>> ReadContactsAsync(
         CommercialPremiumOptions options, int? limit, CancellationToken ct)
     {
-        var rows = new List<AdditionalContactRow>();
+        var rows = new List<CommercialContactRow>();
         await using var connection = new SqlConnection(options.ConnectionString);
         await connection.OpenAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandTimeout = 90;
         command.CommandText = $"""
             SELECT {(limit.HasValue ? $"TOP ({limit.Value})" : string.Empty)}
-                CIDDIRECCION, CIDCATALOGO,
+                CIDDIRECCION,
+                CIDCATALOGO,
                 LTRIM(RTRIM(ISNULL(CNOMBRECALLE, ''))),
                 LTRIM(RTRIM(ISNULL(CEMAIL, ''))),
                 LTRIM(RTRIM(ISNULL(CTELEFONO1, ''))),
@@ -317,11 +309,16 @@ public static class CommercialPremiumSyncEndpoints
             WHERE CTIPOCATALOGO = 6 AND CIDCATALOGO > 0
             ORDER BY CIDCATALOGO, CIDDIRECCION;
             """;
+
         await using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
-            rows.Add(new AdditionalContactRow(
-                reader.GetInt32(0), reader.GetInt32(1), EmptyToNull(reader.GetString(2)),
-                EmptyToNull(reader.GetString(3)), EmptyToNull(reader.GetString(4)), EmptyToNull(reader.GetString(5))));
+            rows.Add(new CommercialContactRow(
+                reader.GetInt32(0),
+                reader.GetInt32(1),
+                EmptyToNull(reader.GetString(2)),
+                EmptyToNull(reader.GetString(3)),
+                EmptyToNull(reader.GetString(4)),
+                EmptyToNull(reader.GetString(5))));
         return rows;
     }
 
@@ -334,16 +331,26 @@ public static class CommercialPremiumSyncEndpoints
     private static string? FirstEmail(string? value) =>
         string.IsNullOrWhiteSpace(value)
             ? null
-            : value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault()?.ToLowerInvariant();
+            : value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault()?.ToLowerInvariant();
 
     private static string NormalizeRfc(string value) => value.Replace(" ", string.Empty).Trim().ToUpperInvariant();
     private static string? EmptyToNull(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private sealed record CommercialPremiumOptions(string ConnectionString, string AllowedDatabase);
     private sealed record CommercialCompanyRow(
-        int Id, string TradeName, string BusinessName, string Rfc,
-        string? Email1, string? Email2, string? Email3, string? Phone,
-        string? Address, string? City, string? State, string? PostalCode, string? ContactName);
-    private sealed record AdditionalContactRow(
-        int AddressId, int CustomerId, string? Name, string? Email, string? Phone1, string? Phone2);
+        int Id,
+        string Code,
+        string BusinessName,
+        string Rfc,
+        string? Email1,
+        string? Email2,
+        string? Email3);
+    private sealed record CommercialContactRow(
+        int AddressId,
+        int CustomerId,
+        string? Name,
+        string? Email,
+        string? Phone1,
+        string? Phone2);
 }
