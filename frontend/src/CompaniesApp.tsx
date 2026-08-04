@@ -4,7 +4,7 @@ import {
   DialogContent, DialogTitle, IconButton, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TextField, Typography,
 } from '@mui/material'
-import { Add, DeleteOutline, EditOutlined, Refresh, Search } from '@mui/icons-material'
+import { Add, DeleteOutline, EditOutlined, Refresh } from '@mui/icons-material'
 import { apiFetch, apiJson } from './api/apiClient'
 import { useAuth } from './auth/AuthProvider'
 
@@ -76,7 +76,22 @@ export default function CompaniesApp() {
     catch (value) { setError(value instanceof Error ? value.message : 'No fue posible abrir la empresa.') }
   }
 
-  useEffect(() => { void loadCompanies('') }, [])
+  useEffect(() => {
+    const term = search.trim()
+
+    if (term.length > 0 && term.length < 3) {
+      setItems([])
+      setSelected(null)
+      setLoading(false)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadCompanies(term)
+    }, 350)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
 
   function openNewCompany() { setEditingCompany(null); setCompanyForm(emptyCompany); setCompanyOpen(true) }
   function openEditCompany(company: Company) {
@@ -150,13 +165,19 @@ export default function CompaniesApp() {
         {canManage && <Button variant="contained" startIcon={<Add />} onClick={openNewCompany}>Nueva empresa</Button>}
       </Stack>
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-      <Paper sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <TextField fullWidth size="small" placeholder="Buscar por nombre, razón social o RFC" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void loadCompanies() }} />
-        <Button variant="outlined" startIcon={<Search />} onClick={() => void loadCompanies()}>Buscar</Button>
-        <IconButton onClick={() => { setSearch(''); void loadCompanies('') }}><Refresh /></IconButton>
+      <Paper sx={{ p: 2 }}><Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Escribe al menos 3 caracteres para buscar"
+          value={search}
+          onChange={event => setSearch(event.target.value)}
+          helperText={search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para mostrar resultados.' : ' '}
+        />
+        <IconButton aria-label="Limpiar búsqueda" onClick={() => setSearch('')}><Refresh /></IconButton>
       </Stack></Paper>
       <TableContainer component={Paper}><Table><TableHead><TableRow><TableCell>Empresa</TableCell><TableCell>RFC</TableCell><TableCell>Tipo</TableCell><TableCell>Estado</TableCell><TableCell>Contactos</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead><TableBody>
-        {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={28} /></TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={6} align="center">No hay empresas registradas.</TableCell></TableRow> : items.map(company => <TableRow hover key={company.id} sx={{ cursor: 'pointer' }} onClick={() => void loadCompany(company.id)}>
+        {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={28} /></TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={6} align="center">{search.trim().length > 0 && search.trim().length < 3 ? 'Escribe al menos 3 caracteres para buscar.' : 'No hay empresas registradas.'}</TableCell></TableRow> : items.map(company => <TableRow hover key={company.id} sx={{ cursor: 'pointer' }} onClick={() => void loadCompany(company.id)}>
           <TableCell><Typography fontWeight={700}>{company.tradeName}</Typography><Typography variant="caption" color="text.secondary">{company.businessName}</Typography></TableCell>
           <TableCell>{company.rfc}</TableCell><TableCell>{company.customerType}</TableCell><TableCell><Chip size="small" label={company.status} /></TableCell><TableCell>{company.contactsCount}</TableCell>
           <TableCell align="right">{canManage && <IconButton onClick={event => { event.stopPropagation(); void loadCompany(company.id).then(() => undefined) }}><EditOutlined /></IconButton>}</TableCell>
