@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import {
   Alert, Box, Button, Card, CardContent, CircularProgress, Container, IconButton,
   InputAdornment, Link, Stack, TextField, Typography,
@@ -103,7 +103,7 @@ function PasswordField({ label, value, onChange, visible, onToggle, autoComplete
   />
 }
 
-function AuthCard({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+function AuthCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return <Box component="main" minHeight="100vh" display="grid" sx={{ placeItems: 'center', px: 2 }}>
     <Container maxWidth="sm">
       <Card elevation={4}>
