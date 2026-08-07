@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Container, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
-import { CloudSync, Preview, Storage } from '@mui/icons-material'
+import {
+  Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Container, IconButton,
+  InputAdornment, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow,
+  TextField, Typography,
+} from '@mui/material'
+import { CloudSync, Email, Preview, Storage, Visibility, VisibilityOff } from '@mui/icons-material'
 import { apiFetch, apiJson } from './api/apiClient'
 import { useAuth } from './auth/AuthProvider'
 
@@ -11,6 +15,10 @@ type TestResult = { connected: boolean; database: string; companies: number; rea
 type PreviewItem = { id: number; tradeName: string; businessName: string; rfc: string; email?: string; phone?: string; contactName?: string }
 type PreviewResult = { totalPreview: number; items: PreviewItem[] }
 type SyncResult = { source: number; created: number; updated: number; skipped: number; contactsCreated: number; errors: unknown[] }
+type SmtpStatus = { host: string; port: number; enableSsl: boolean; userName?: string; fromEmail: string; fromName?: string; passwordConfigured: boolean; configured: boolean }
+type SmtpForm = { host: string; port: string; enableSsl: boolean; userName: string; password: string; fromEmail: string; fromName: string; testRecipient: string }
+
+const emptySmtp: SmtpForm = { host: '', port: '587', enableSsl: true, userName: '', password: '', fromEmail: '', fromName: 'CRM MIDA', testRecipient: '' }
 
 export default function AdministrationApp() {
   const { hasPermission } = useAuth()
@@ -18,21 +26,31 @@ export default function AdministrationApp() {
   const [audit, setAudit] = useState<AuditRow[]>([])
   const [jobs, setJobs] = useState<ImportJob[]>([])
   const [status, setStatus] = useState<ContpaqiStatus | null>(null)
+  const [smtpStatus, setSmtpStatus] = useState<SmtpStatus | null>(null)
+  const [smtp, setSmtp] = useState<SmtpForm>(emptySmtp)
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false)
   const [preview, setPreview] = useState<PreviewItem[]>([])
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
+  const [smtpWorking, setSmtpWorking] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   async function load() {
     setLoading(true)
     try {
-      const [auditData, jobsData, statusData] = await Promise.all([
+      const [auditData, jobsData, statusData, smtpData] = await Promise.all([
         apiJson<AuditRow[]>('/api/v1/audit?limit=100'),
         apiJson<ImportJob[]>('/api/v1/import/jobs'),
         apiJson<ContpaqiStatus>('/api/v1/contpaqi/status'),
+        canManage ? apiJson<SmtpStatus>('/api/v1/administration/smtp/') : Promise.resolve(null),
       ])
       setAudit(auditData); setJobs(jobsData); setStatus(statusData)
+      if (smtpData) {
+        setSmtpStatus(smtpData)
+        setSmtp({ host: smtpData.host ?? '', port: String(smtpData.port ?? 587), enableSsl: smtpData.enableSsl,
+          userName: smtpData.userName ?? '', password: '', fromEmail: smtpData.fromEmail ?? '', fromName: smtpData.fromName ?? 'CRM MIDA', testRecipient: '' })
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Error de carga.')
     } finally { setLoading(false) }
@@ -64,17 +82,66 @@ export default function AdministrationApp() {
         setMessage(`Sincronización terminada: ${result.created} creadas, ${result.updated} actualizadas, ${result.contactsCreated} contactos y ${result.errors.length} errores.`)
         await load()
       }
-    } catch (value) {
-      setError(value instanceof Error ? value.message : 'La operación no pudo completarse.')
-    } finally { setWorking(false) }
+    } catch (value) { setError(value instanceof Error ? value.message : 'La operación no pudo completarse.') }
+    finally { setWorking(false) }
+  }
+
+  async function saveSmtp() {
+    setSmtpWorking(true); setError(''); setMessage('')
+    try {
+      const response = await apiFetch('/api/v1/administration/smtp/', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host: smtp.host, port: Number(smtp.port), enableSsl: smtp.enableSsl, userName: smtp.userName || null, password: smtp.password || null, fromEmail: smtp.fromEmail, fromName: smtp.fromName || null }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.message ?? 'No fue posible guardar SMTP.')
+      setMessage(body.message); setSmtp(current => ({ ...current, password: '' }))
+      const current = await apiJson<SmtpStatus>('/api/v1/administration/smtp/')
+      setSmtpStatus(current)
+    } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible guardar SMTP.') }
+    finally { setSmtpWorking(false) }
+  }
+
+  async function testSmtp() {
+    setSmtpWorking(true); setError(''); setMessage('')
+    try {
+      const response = await apiFetch('/api/v1/administration/smtp/test', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipient: smtp.testRecipient }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.message ?? 'No fue posible probar SMTP.')
+      setMessage(body.message)
+    } catch (value) { setError(value instanceof Error ? value.message : 'No fue posible probar SMTP.') }
+    finally { setSmtpWorking(false) }
   }
 
   if (loading) return <Box minHeight="70vh" display="grid" sx={{ placeItems: 'center' }}><CircularProgress /></Box>
 
   return <Container maxWidth="xl" sx={{ py: 4 }}><Stack spacing={3}>
-    <Box><Typography variant="overline">CRM MIDA · Administración</Typography><Typography variant="h3">CONTPAQi y auditoría</Typography><Typography color="text.secondary">Sincronización de empresas y contactos desde Comercial Premium hacia CRM MIDA.</Typography></Box>
+    <Box><Typography variant="overline">CRM MIDA · Administración</Typography><Typography variant="h3">Configuración e integraciones</Typography><Typography color="text.secondary">SMTP, sincronización con Comercial Premium y auditoría del CRM.</Typography></Box>
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
     {message && <Alert severity="success" onClose={() => setMessage('')}>{message}</Alert>}
+
+    {canManage && <Card><CardContent><Stack spacing={2}>
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} alignItems={{ md: 'center' }}>
+        <Box><Typography variant="h6">Correo saliente (SMTP)</Typography><Typography variant="body2" color="text.secondary">Configuración central para recuperación de contraseña y envío de correos del CRM.</Typography></Box>
+        <Chip label={smtpStatus?.configured ? 'SMTP configurado' : 'SMTP sin configurar'} color={smtpStatus?.configured ? 'success' : 'warning'} />
+      </Stack>
+      <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
+        <TextField label="Servidor SMTP" value={smtp.host} onChange={e => setSmtp({ ...smtp, host: e.target.value })} placeholder="smtp.office365.com" />
+        <TextField label="Puerto" type="number" value={smtp.port} onChange={e => setSmtp({ ...smtp, port: e.target.value })} />
+        <TextField select label="Seguridad SSL/TLS" value={smtp.enableSsl ? 'yes' : 'no'} onChange={e => setSmtp({ ...smtp, enableSsl: e.target.value === 'yes' })}><MenuItem value="yes">Activada</MenuItem><MenuItem value="no">Desactivada</MenuItem></TextField>
+        <TextField label="Usuario SMTP" value={smtp.userName} onChange={e => setSmtp({ ...smtp, userName: e.target.value })} />
+        <TextField label={smtpStatus?.passwordConfigured ? 'Contraseña SMTP (dejar vacío para conservar)' : 'Contraseña SMTP'} type={showSmtpPassword ? 'text' : 'password'} value={smtp.password} onChange={e => setSmtp({ ...smtp, password: e.target.value })} InputProps={{ endAdornment: <InputAdornment position="end"><IconButton onClick={() => setShowSmtpPassword(v => !v)} edge="end">{showSmtpPassword ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment> }} />
+        <TextField label="Correo remitente" type="email" value={smtp.fromEmail} onChange={e => setSmtp({ ...smtp, fromEmail: e.target.value })} />
+        <TextField label="Nombre del remitente" value={smtp.fromName} onChange={e => setSmtp({ ...smtp, fromName: e.target.value })} placeholder="CRM MIDA" />
+        <TextField label="Correo para prueba" type="email" value={smtp.testRecipient} onChange={e => setSmtp({ ...smtp, testRecipient: e.target.value })} placeholder="usuario@mida.mx" />
+      </Box>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Button variant="contained" startIcon={<Storage />} disabled={smtpWorking || !smtp.host || !smtp.fromEmail} onClick={() => void saveSmtp()}>{smtpWorking ? 'Procesando…' : 'Guardar SMTP'}</Button>
+        <Button variant="outlined" startIcon={<Email />} disabled={smtpWorking || !smtpStatus?.configured || !smtp.testRecipient} onClick={() => void testSmtp()}>Enviar correo de prueba</Button>
+      </Stack>
+    </Stack></CardContent></Card>}
 
     {canManage && <Card><CardContent><Stack spacing={2}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} alignItems={{ md: 'center' }}>
