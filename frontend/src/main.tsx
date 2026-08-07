@@ -17,6 +17,7 @@ import PublicQuoteApp from './PublicQuoteApp'
 import AppShell from './AppShell'
 import { AuthProvider } from './auth/AuthProvider'
 import LoginPage from './auth/LoginPage'
+import { ForgotPasswordPage, ResetPasswordPage } from './auth/PasswordRecoveryPage'
 import ProtectedRoute from './auth/ProtectedRoute'
 import { installAuthPersistence } from './session'
 import { theme } from './theme/theme'
@@ -47,6 +48,8 @@ function PrivateWorkspace() {
 function Root() {
   return <Routes>
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/public/quotes/:token" element={<PublicQuoteApp />} />
     <Route path="/*" element={<PrivateWorkspace />} />
   </Routes>

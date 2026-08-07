@@ -10,7 +10,8 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers })
   if (response.status === 401) {
     clearStoredSession()
-    window.location.assign('/')
+    const returnTo = `${window.location.pathname}${window.location.search}`
+    window.location.assign(`/login?returnTo=${encodeURIComponent(returnTo)}`)
   }
   return response
 }

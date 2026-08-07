@@ -17,4 +17,32 @@ export const theme = createTheme({
   typography: {
     fontFamily: 'Inter, Roboto, Arial, sans-serif',
   },
+  components: {
+    MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
+      styleOverrides: {
+        root: {
+          alignSelf: 'center',
+          minHeight: 40,
+          maxHeight: 40,
+          padding: '8px 18px',
+          borderRadius: 8,
+          whiteSpace: 'nowrap',
+          lineHeight: 1.2,
+        },
+        sizeSmall: {
+          minHeight: 34,
+          maxHeight: 34,
+          padding: '6px 14px',
+        },
+        sizeLarge: {
+          minHeight: 44,
+          maxHeight: 44,
+          padding: '10px 22px',
+        },
+      },
+    },
+  },
 })

@@ -39,7 +39,9 @@ public sealed class Company : BaseEntity
     public Guid? AssignedUserId { get; private set; }
     public User? AssignedUser { get; private set; }
 
+    // Contacts se conserva como relación de origen/legado.
     public ICollection<Contact> Contacts { get; private set; } = new List<Contact>();
+    public ICollection<CompanyContact> CompanyContacts { get; private set; } = new List<CompanyContact>();
 
     public void Update(
         string tradeName,

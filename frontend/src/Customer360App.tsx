@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Container, Divider, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, CircularProgress, Container, Divider, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { apiJson } from './api/apiClient'
 
-const api = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-
-type Session = { accessToken: string }
 type CompanyItem = { id: string; tradeName: string; businessName: string; rfc: string }
 type Paged<T> = { items: T[] }
 type Customer360 = {
@@ -17,24 +15,65 @@ type Customer360 = {
 }
 
 export default function Customer360App(){
-  const[email,setEmail]=useState(''); const[password,setPassword]=useState(''); const[session,setSession]=useState<Session|null>(null); const[error,setError]=useState(''); const[loading,setLoading]=useState(false)
-  async function login(e:FormEvent){e.preventDefault();setLoading(true);setError('');try{const r=await fetch(`${api}/api/v1/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});if(!r.ok)throw new Error('Acceso incorrecto.');setSession(await r.json())}catch(x){setError(x instanceof Error?x.message:'Error')}finally{setLoading(false)}}
-  if(!session)return <Container maxWidth="sm" sx={{py:10}}><Card><CardContent><Stack component="form" spacing={2} onSubmit={login}><Typography variant="overline">CRM MIDA</Typography><Typography variant="h4">Cliente 360°</Typography><Typography color="text.secondary">Consulta toda la relación comercial desde una sola vista.</Typography>{error&&<Alert severity="error">{error}</Alert>}<TextField label="Correo" type="email" required value={email} onChange={e=>setEmail(e.target.value)}/><TextField label="Contraseña" type="password" required value={password} onChange={e=>setPassword(e.target.value)}/><Button type="submit" variant="contained" disabled={loading}>{loading?<CircularProgress size={22}/>: 'Ingresar'}</Button></Stack></CardContent></Card></Container>
-  return <Workspace token={session.accessToken}/>
-}
+  const[companies,setCompanies]=useState<CompanyItem[]>([])
+  const[selectedCompany,setSelectedCompany]=useState<CompanyItem|null>(null)
+  const[companySearch,setCompanySearch]=useState('')
+  const[searchingCompanies,setSearchingCompanies]=useState(false)
+  const[data,setData]=useState<Customer360|null>(null)
+  const[tab,setTab]=useState(0)
+  const[loading,setLoading]=useState(false)
+  const[error,setError]=useState('')
 
-function Workspace({token}:{token:string}){
-  const headers=useMemo(()=>({Authorization:`Bearer ${token}`}),[token]); const[companies,setCompanies]=useState<CompanyItem[]>([]); const[companyId,setCompanyId]=useState(''); const[data,setData]=useState<Customer360|null>(null); const[tab,setTab]=useState(0); const[loading,setLoading]=useState(false); const[error,setError]=useState('')
-  useEffect(()=>{void (async()=>{const r=await fetch(`${api}/api/v1/companies?page=1&pageSize=100`,{headers});if(r.ok)setCompanies(((await r.json()) as Paged<CompanyItem>).items)})()},[])
-  async function load(id=companyId){if(!id)return;setLoading(true);setError('');const r=await fetch(`${api}/api/v1/customers/${id}/360`,{headers});if(!r.ok){setError('No fue posible cargar Cliente 360°.');setLoading(false);return}setData(await r.json());setTab(0);setLoading(false)}
+  useEffect(()=>{
+    const term=companySearch.trim()
+    if(term.length<3){setCompanies([]);setSearchingCompanies(false);return}
+
+    const timeoutId=window.setTimeout(()=>{
+      void (async()=>{
+        setSearchingCompanies(true)
+        try{
+          const result=await apiJson<Paged<CompanyItem>>(`/api/v1/companies?search=${encodeURIComponent(term)}&page=1&pageSize=20`)
+          setCompanies(result.items)
+        }catch{
+          setCompanies([])
+          setError('No fue posible buscar empresas.')
+        }finally{
+          setSearchingCompanies(false)
+        }
+      })()
+    },350)
+
+    return()=>window.clearTimeout(timeoutId)
+  },[companySearch])
+
+  async function load(id=selectedCompany?.id){if(!id)return;setLoading(true);setError('');try{setData(await apiJson<Customer360>(`/api/v1/customers/${id}/360`));setTab(0)}catch{setError('No fue posible cargar Cliente 360°.')}finally{setLoading(false)}}
   const money=(v:number)=>v.toLocaleString('es-MX',{style:'currency',currency:'MXN'})
+  const companyName=(company:CompanyItem)=>company.businessName||company.tradeName||company.rfc
+
   return <Box minHeight="100vh" bgcolor="background.default"><Container maxWidth="xl" sx={{py:5}}><Stack spacing={3}>
     <Box><Typography variant="overline">Núcleo de relación con clientes</Typography><Typography variant="h3">Cliente 360°</Typography><Typography color="text.secondary">Contactos, pipeline, cotizaciones, actividades, licencias y renovaciones internas del CRM.</Typography></Box>
-    {error&&<Alert severity="error">{error}</Alert>}
-    <Paper sx={{p:2}}><Stack direction={{xs:'column',md:'row'}} spacing={2}><TextField select fullWidth label="Empresa" value={companyId} onChange={e=>setCompanyId(e.target.value)}>{companies.map(c=><MenuItem key={c.id} value={c.id}>{c.tradeName} · {c.rfc}</MenuItem>)}</TextField><Button variant="contained" onClick={()=>void load()} disabled={!companyId||loading}>Abrir Cliente 360°</Button></Stack></Paper>
+    {error&&<Alert severity="error" onClose={()=>setError('')}>{error}</Alert>}
+    <Paper sx={{p:2}}><Stack direction={{xs:'column',md:'row'}} spacing={2}>
+      <Autocomplete
+        fullWidth
+        options={companies}
+        value={selectedCompany}
+        inputValue={companySearch}
+        loading={searchingCompanies}
+        filterOptions={options=>options}
+        getOptionLabel={option=>`${companyName(option)} · ${option.rfc}`}
+        isOptionEqualToValue={(option,value)=>option.id===value.id}
+        noOptionsText={companySearch.trim().length<3?'Escribe al menos 3 caracteres para buscar':'No se encontraron empresas'}
+        onInputChange={(_,value,reason)=>{setCompanySearch(value);if(reason==='input')setSelectedCompany(null)}}
+        onChange={(_,value)=>setSelectedCompany(value)}
+        renderOption={(props,option)=><Box component="li" {...props} key={option.id}><Box><Typography fontWeight={700}>{companyName(option)}</Typography><Typography variant="body2" color="text.secondary">RFC {option.rfc}{option.tradeName&&option.tradeName!==option.businessName?` · ${option.tradeName}`:''}</Typography></Box></Box>}
+        renderInput={params=><TextField {...params} label="Buscar empresa" placeholder="Nombre, razón social o RFC" helperText={companySearch.trim().length>0&&companySearch.trim().length<3?'Escribe al menos 3 caracteres.':' '} InputProps={{...params.InputProps,endAdornment:<>{searchingCompanies?<CircularProgress color="inherit" size={20}/>:null}{params.InputProps.endAdornment}</>}}/>}
+      />
+      <Button variant="contained" onClick={()=>void load()} disabled={!selectedCompany||loading}>Abrir Cliente 360°</Button>
+    </Stack></Paper>
     {loading&&<Box textAlign="center"><CircularProgress/></Box>}
     {data&&<>
-      <Paper sx={{p:3}}><Stack direction={{xs:'column',md:'row'}} justifyContent="space-between" gap={2}><Box><Typography variant="h4">{data.company.tradeName}</Typography><Typography>{data.company.businessName}</Typography><Typography color="text.secondary">RFC {data.company.rfc} · {data.company.customerType}</Typography></Box><Stack direction="row" spacing={1} flexWrap="wrap"><Chip label={data.company.status}/>{data.company.tags&&<Chip variant="outlined" label={data.company.tags}/>}</Stack></Stack><Divider sx={{my:2}}/><Typography>{[data.company.email,data.company.phone,data.company.city,data.company.state].filter(Boolean).join(' · ')}</Typography></Paper>
+      <Paper sx={{p:3}}><Stack direction={{xs:'column',md:'row'}} justifyContent="space-between" gap={2}><Box><Typography variant="h4">{data.company.businessName||data.company.tradeName}</Typography>{data.company.tradeName&&data.company.tradeName!==data.company.businessName&&<Typography>{data.company.tradeName}</Typography>}<Typography color="text.secondary">RFC {data.company.rfc} · {data.company.customerType}</Typography></Box><Stack direction="row" spacing={1} flexWrap="wrap"><Chip label={data.company.status}/>{data.company.tags&&<Chip variant="outlined" label={data.company.tags}/>}</Stack></Stack><Divider sx={{my:2}}/><Typography>{[data.company.email,data.company.phone,data.company.city,data.company.state].filter(Boolean).join(' · ')}</Typography></Paper>
       <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,1fr)',md:'repeat(4,1fr)'},gap:2}}>{[
         ['Contactos',data.summary.contacts],['Oportunidades abiertas',data.summary.openOpportunities],['Pipeline',money(data.summary.openPipeline)],['Actividades pendientes',data.summary.pendingActivities],['Cotizaciones',data.summary.quotes],['Cotizaciones aceptadas',money(data.summary.acceptedQuotes)],['Licencias',data.summary.licenses],['Vencen ≤ 90 días',data.summary.expiringLicenses]
       ].map(([label,value])=><Card key={String(label)}><CardContent><Typography color="text.secondary">{label}</Typography><Typography variant="h5">{value}</Typography></CardContent></Card>)}</Box>

@@ -124,10 +124,10 @@ public static class LicenseEndpoints
             SELECT l."Id",l."CompanyId",c."TradeName",l."ProductName",l."SerialNumber",l."Version",l."LicenseType",
                    l."Users",l."Companies",l."StartsAtUtc",l."ExpiresAtUtc",l."Status",l."Notes"
             FROM licenses l INNER JOIN companies c ON c."Id"=l."CompanyId"
-            WHERE (@id IS NULL OR l."Id"=@id)
-              AND (@search IS NULL OR LOWER(l."ProductName") LIKE @term OR LOWER(l."SerialNumber") LIKE @term OR LOWER(c."TradeName") LIKE @term)
-              AND (@status IS NULL OR l."Status"=@status)
-              AND (@limitDate IS NULL OR (l."ExpiresAtUtc">=@now AND l."ExpiresAtUtc"<=@limitDate))
+            WHERE (CAST(@id AS uuid) IS NULL OR l."Id"=CAST(@id AS uuid))
+              AND (CAST(@search AS text) IS NULL OR LOWER(l."ProductName") LIKE CAST(@term AS text) OR LOWER(l."SerialNumber") LIKE CAST(@term AS text) OR LOWER(c."TradeName") LIKE CAST(@term AS text))
+              AND (CAST(@status AS text) IS NULL OR l."Status"=CAST(@status AS text))
+              AND (CAST(@limitDate AS timestamp with time zone) IS NULL OR (l."ExpiresAtUtc">=@now AND l."ExpiresAtUtc"<=CAST(@limitDate AS timestamp with time zone)))
             ORDER BY l."ExpiresAtUtc";
             """;
         Add(command, "@id", id.HasValue ? id.Value : DBNull.Value);
@@ -149,7 +149,7 @@ public static class LicenseEndpoints
     }
 
     private static async Task<bool> SerialExistsAsync(ApplicationDbContext db, string serial, Guid? excludedId, CancellationToken ct) =>
-        Convert.ToInt32(await ScalarAsync(db, "SELECT COUNT(*) FROM licenses WHERE \"SerialNumber\"=@serial AND (@id IS NULL OR \"Id\"<>@id);", ct,
+        Convert.ToInt32(await ScalarAsync(db, "SELECT COUNT(*) FROM licenses WHERE \"SerialNumber\"=@serial AND (CAST(@id AS uuid) IS NULL OR \"Id\"<>CAST(@id AS uuid));", ct,
             ("@serial", serial), ("@id", excludedId.HasValue ? excludedId.Value : DBNull.Value))) > 0;
 
     private static async Task<bool> HasPendingRenewalAsync(ApplicationDbContext db, Guid licenseId, CancellationToken ct) =>

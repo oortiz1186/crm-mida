@@ -3,6 +3,7 @@ using System.Text;
 using CrmMida.Api.Administration;
 using CrmMida.Api.Auth;
 using CrmMida.Api.Commercial;
+using CrmMida.Api.Configuration;
 using CrmMida.Application;
 using CrmMida.Application.Security;
 using CrmMida.Infrastructure;
@@ -13,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using QuestPDF.Infrastructure;
 
+EnvironmentFileLoader.LoadFromCurrentOrParentDirectories();
 QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +27,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QuotePdfService>();
 builder.Services.AddScoped<QuoteDeliveryService>();
+builder.Services.AddScoped<SmtpSettingsService>();
 builder.Services.AddScoped<LicenseAlertProcessor>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddHostedService<LicenseAlertBackgroundService>();
@@ -73,6 +76,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<AuthSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<SmtpSettingsService>().ApplyPersistedToConfigurationAsync();
 }
 
 app.MapGet("/api/v1/health", () => Results.Ok(new { status = "ok", service = "CRM MIDA API", utc = DateTime.UtcNow }));
@@ -95,7 +99,10 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
     return Results.Ok(new CurrentUserDto(id, principal.FindFirstValue(ClaimTypes.Email) ?? string.Empty, principal.Identity?.Name ?? string.Empty, principal.FindAll(ClaimTypes.Role).Select(x => x.Value).Distinct().ToArray(), principal.FindAll("permission").Select(x => x.Value).Distinct().ToArray()));
 }).RequireAuthorization();
 
+app.MapPasswordRecoveryEndpoints();
+app.MapSmtpSettingsEndpoints();
 app.MapCommercialEndpoints();
+app.MapContactRelationEndpoints();
 app.MapProspectEndpoints();
 app.MapOpportunityEndpoints();
 app.MapQuoteEndpoints();
@@ -108,6 +115,7 @@ app.MapLicenseAlertEndpoints();
 app.MapCustomer360Endpoints();
 app.MapAgendaDashboardEndpoints();
 app.MapImportAuditEndpoints();
+app.MapCommercialPremiumSyncEndpoints();
 app.MapDocumentsReportsEndpoints();
 app.MapUserAdministrationEndpoints();
 app.MapGlobalSearchEndpoints();
