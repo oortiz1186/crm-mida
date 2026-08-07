@@ -34,13 +34,30 @@ public sealed class SmtpSettingsService(ApplicationDbContext db, IConfiguration 
     {
         var current = preservePassword ? await GetAsync(ct) : null;
         var password = preservePassword && string.IsNullOrWhiteSpace(settings.Password) ? current?.Password : settings.Password;
+        var effective = settings with { Password = password };
         await db.Database.ExecuteSqlInterpolatedAsync($@"
             INSERT INTO smtp_settings (\"Id\", \"Host\", \"Port\", \"EnableSsl\", \"UserName\", \"Password\", \"FromEmail\", \"FromName\", \"UpdatedAtUtc\")
-            VALUES (1, {settings.Host}, {settings.Port}, {settings.EnableSsl}, {settings.UserName}, {password}, {settings.FromEmail}, {settings.FromName}, {DateTime.UtcNow})
+            VALUES (1, {effective.Host}, {effective.Port}, {effective.EnableSsl}, {effective.UserName}, {effective.Password}, {effective.FromEmail}, {effective.FromName}, {DateTime.UtcNow})
             ON CONFLICT (\"Id\") DO UPDATE SET
                 \"Host\" = EXCLUDED.\"Host\", \"Port\" = EXCLUDED.\"Port\", \"EnableSsl\" = EXCLUDED.\"EnableSsl\",
                 \"UserName\" = EXCLUDED.\"UserName\", \"Password\" = EXCLUDED.\"Password\", \"FromEmail\" = EXCLUDED.\"FromEmail\",
                 \"FromName\" = EXCLUDED.\"FromName\", \"UpdatedAtUtc\" = EXCLUDED.\"UpdatedAtUtc\";", ct);
+        ApplyToConfiguration(effective);
+    }
+
+    public async Task ApplyPersistedToConfigurationAsync(CancellationToken ct = default)
+    {
+        ApplyToConfiguration(await GetAsync(ct));
+    }
+
+    private void ApplyToConfiguration(SmtpSettings settings)
+    {
+        configuration["QuoteDelivery:Smtp:Host"] = settings.Host;
+        configuration["QuoteDelivery:Smtp:Port"] = settings.Port.ToString();
+        configuration["QuoteDelivery:Smtp:EnableSsl"] = settings.EnableSsl.ToString();
+        configuration["QuoteDelivery:Smtp:User"] = settings.UserName ?? string.Empty;
+        configuration["QuoteDelivery:Smtp:Password"] = settings.Password ?? string.Empty;
+        configuration["QuoteDelivery:Smtp:From"] = settings.FromEmail;
     }
 }
 
