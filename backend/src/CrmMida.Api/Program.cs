@@ -97,6 +97,7 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
     return Results.Ok(new CurrentUserDto(id, principal.FindFirstValue(ClaimTypes.Email) ?? string.Empty, principal.Identity?.Name ?? string.Empty, principal.FindAll(ClaimTypes.Role).Select(x => x.Value).Distinct().ToArray(), principal.FindAll("permission").Select(x => x.Value).Distinct().ToArray()));
 }).RequireAuthorization();
 
+app.MapPasswordRecoveryEndpoints();
 app.MapCommercialEndpoints();
 app.MapContactRelationEndpoints();
 app.MapProspectEndpoints();
