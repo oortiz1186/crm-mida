@@ -76,6 +76,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<AuthSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<SmtpSettingsService>().ApplyPersistedToConfigurationAsync();
 }
 
 app.MapGet("/api/v1/health", () => Results.Ok(new { status = "ok", service = "CRM MIDA API", utc = DateTime.UtcNow }));
