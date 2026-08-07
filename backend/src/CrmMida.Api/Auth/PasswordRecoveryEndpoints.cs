@@ -23,6 +23,7 @@ public static class PasswordRecoveryEndpoints
         ApplicationDbContext db,
         IConfiguration configuration,
         IWebHostEnvironment environment,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         const string genericMessage = "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.";
@@ -50,7 +51,7 @@ public static class PasswordRecoveryEndpoints
         if (environment.IsDevelopment())
             return Results.Ok(new { message = genericMessage, developmentResetUrl = resetUrl });
 
-        app.Logger.LogWarning("Password recovery requested but SMTP is not configured.");
+        loggerFactory.CreateLogger("PasswordRecovery").LogWarning("Password recovery requested but SMTP is not configured.");
         return Results.Ok(new { message = genericMessage });
     }
 
