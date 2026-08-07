@@ -27,6 +27,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QuotePdfService>();
 builder.Services.AddScoped<QuoteDeliveryService>();
+builder.Services.AddScoped<SmtpSettingsService>();
 builder.Services.AddScoped<LicenseAlertProcessor>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddHostedService<LicenseAlertBackgroundService>();
@@ -98,6 +99,7 @@ app.MapGet("/api/v1/auth/me", (ClaimsPrincipal principal) =>
 }).RequireAuthorization();
 
 app.MapPasswordRecoveryEndpoints();
+app.MapSmtpSettingsEndpoints();
 app.MapCommercialEndpoints();
 app.MapContactRelationEndpoints();
 app.MapProspectEndpoints();
