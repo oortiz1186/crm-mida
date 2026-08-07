@@ -35,13 +35,21 @@ public sealed class SmtpSettingsService(ApplicationDbContext db, IConfiguration 
         var current = preservePassword ? await GetAsync(ct) : null;
         var password = preservePassword && string.IsNullOrWhiteSpace(settings.Password) ? current?.Password : settings.Password;
         var effective = settings with { Password = password };
-        await db.Database.ExecuteSqlInterpolatedAsync($@"
-            INSERT INTO smtp_settings (\"Id\", \"Host\", \"Port\", \"EnableSsl\", \"UserName\", \"Password\", \"FromEmail\", \"FromName\", \"UpdatedAtUtc\")
+
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO smtp_settings ("Id", "Host", "Port", "EnableSsl", "UserName", "Password", "FromEmail", "FromName", "UpdatedAtUtc")
             VALUES (1, {effective.Host}, {effective.Port}, {effective.EnableSsl}, {effective.UserName}, {effective.Password}, {effective.FromEmail}, {effective.FromName}, {DateTime.UtcNow})
-            ON CONFLICT (\"Id\") DO UPDATE SET
-                \"Host\" = EXCLUDED.\"Host\", \"Port\" = EXCLUDED.\"Port\", \"EnableSsl\" = EXCLUDED.\"EnableSsl\",
-                \"UserName\" = EXCLUDED.\"UserName\", \"Password\" = EXCLUDED.\"Password\", \"FromEmail\" = EXCLUDED.\"FromEmail\",
-                \"FromName\" = EXCLUDED.\"FromName\", \"UpdatedAtUtc\" = EXCLUDED.\"UpdatedAtUtc\";", ct);
+            ON CONFLICT ("Id") DO UPDATE SET
+                "Host" = EXCLUDED."Host",
+                "Port" = EXCLUDED."Port",
+                "EnableSsl" = EXCLUDED."EnableSsl",
+                "UserName" = EXCLUDED."UserName",
+                "Password" = EXCLUDED."Password",
+                "FromEmail" = EXCLUDED."FromEmail",
+                "FromName" = EXCLUDED."FromName",
+                "UpdatedAtUtc" = EXCLUDED."UpdatedAtUtc";
+            """, ct);
+
         ApplyToConfiguration(effective);
     }
 
